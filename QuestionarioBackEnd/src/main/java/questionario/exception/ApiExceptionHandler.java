@@ -39,6 +39,16 @@ public class ApiExceptionHandler {
                 new ApiErrorResponse(exception.getMessage(), exception.getPendencias(), EnvioIncompletoException.CODIGO));
     }
 
+    @ExceptionHandler(CredenciaisInvalidasException.class)
+    ResponseEntity<ApiErrorResponse> badCredentials(CredenciaisInvalidasException exception) {
+        return response(HttpStatus.UNAUTHORIZED, exception.getMessage());
+    }
+
+    @ExceptionHandler(LoginBloqueadoException.class)
+    ResponseEntity<ApiErrorResponse> loginBlocked(LoginBloqueadoException exception) {
+        return response(HttpStatus.TOO_MANY_REQUESTS, exception.getMessage());
+    }
+
     @ExceptionHandler(EntityNotFoundException.class)
     ResponseEntity<ApiErrorResponse> notFound(EntityNotFoundException exception) {
         return response(HttpStatus.NOT_FOUND, exception.getMessage());

@@ -8,7 +8,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 /**
  * CORS por propriedade ({@code cors.allowed-origins}, separada por vírgula). No uso normal o navegador só fala com o
  * Next (rota /api, que repassa ao Spring), então o CORS é rede de segurança para chamadas diretas em desenvolvimento.
- * Na E11 o Spring Security passa a controlar o CORS e esta classe deve ser removida.
+ * Com o Spring Security (E11) o CORS continua vindo daqui: SecurityConfig usa cors(withDefaults()).
  */
 @Configuration
 public class CorsConfig implements WebMvcConfigurer {

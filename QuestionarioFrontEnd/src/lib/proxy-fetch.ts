@@ -5,8 +5,8 @@ const backendUrl = process.env.BACKEND_INTERNAL_URL ?? "http://localhost:8082/ap
 
 /**
  * BFF: o navegador só fala com o Next (/api/...), que repassa ao Spring por BACKEND_INTERNAL_URL.
- * O token JWT (cookie HTTP-only auth_token) só passa a existir na E11, para a área do admin; sem cookie, o repasse
- * segue sem Authorization e o questionário continua público.
+ * O token JWT do admin vem no cookie HTTP-only auth_token (criado pelo Spring no login) e segue ao backend como
+ * Authorization; sem cookie, o repasse segue sem Authorization e o questionário continua público.
  */
 export async function proxyFetch(req: Request, segments: string[]) {
   try {
@@ -28,10 +28,10 @@ export async function proxyFetch(req: Request, segments: string[]) {
     });
 
     const body = response.status === 204 ? null : await response.arrayBuffer();
-    const nextResponse = new NextResponse(body, {
-      status: response.status,
-      headers: { "Content-Type": response.headers.get("content-type") ?? "application/json" },
-    });
+    const respostaHeaders: Record<string, string> = { "Content-Type": response.headers.get("content-type") ?? "application/json" };
+    const disposicao = response.headers.get("content-disposition");
+    if (disposicao) respostaHeaders["Content-Disposition"] = disposicao; // nome do arquivo do Excel
+    const nextResponse = new NextResponse(body, { status: response.status, headers: respostaHeaders });
     const setCookie = response.headers.get("set-cookie");
     if (setCookie) nextResponse.headers.set("set-cookie", setCookie);
     return nextResponse;
