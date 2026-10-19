@@ -1,0 +1,14 @@
+# Backend
+target/
+*.iml
+.idea/
+
+# Frontend
+node_modules/
+.next/
+*.tsbuildinfo
+npm-debug.log*
+
+# Segredos locais
+.env
+.env.local
