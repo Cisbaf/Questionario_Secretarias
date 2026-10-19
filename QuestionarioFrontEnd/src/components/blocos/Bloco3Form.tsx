@@ -1,20 +1,21 @@
 "use client";
 
 import BlocoLayout from "@/components/BlocoLayout";
-import { Escolha, Marcaveis, NaoDisponivel, Secao, TabelaDinamica, Texto } from "@/components/campos/CamposBase";
+import { Escolha, Marcaveis, NaoDisponivel, Secao, SeletorMesAno, TabelaDinamica, Texto } from "@/components/campos/CamposBase";
 import { useQuestionario } from "@/components/QuestionarioContext";
 import { useBlocoQuestionario } from "@/hooks/useBlocoQuestionario";
 import { SIM_NAO_EM_PARTE, SISTEMAS_REGULACAO, TIPOS_FILA, type SistemaRegulacao } from "@/lib/rotulos";
 import {
   dinamicasDeServidor, dinamicasParaServidor, num, validarLinhas, type CampoSpec, type Linha,
 } from "@/lib/tabelas";
+import { erroDeData, erroDeMes } from "@/lib/datas";
 import { textoOuNulo } from "@/lib/numeros";
 import type { Bloco3Servidor } from "@/types";
 
 export const MAX_FILAS = 15;
 
 export const FILA_SPEC: CampoSpec[] = [
-  { nome: "especialidade", rotulo: "Especialidade ou procedimento", tipo: "texto", max: 200, largo: true },
+  { nome: "especialidade", rotulo: "Especialidade / exame", tipo: "texto", max: 200, largo: true },
   { nome: "sigtap", rotulo: "Código SIGTAP (10 números)", tipo: "sigtap" },
   { nome: "totalAguardando", rotulo: "Total aguardando", tipo: "inteiro" },
   { nome: "prioridadeAlta", rotulo: "Com prioridade alta", tipo: "inteiro" },
@@ -68,7 +69,8 @@ export function validarBloco3(v: Bloco3Valores): Record<string, string> {
   const erros: Record<string, string> = {};
   if (v.sistemaProprioNome.trim().length > 150) erros.sistemaProprioNome = "Máximo de 150 caracteres";
   if (v.sistemaOutroNome.trim().length > 150) erros.sistemaOutroNome = "Máximo de 150 caracteres";
-  if (v.ultimaRevisao !== "" && !/^\d{4}-(0[1-9]|1[0-2])$/.test(v.ultimaRevisao)) erros.ultimaRevisao = "Use mês e ano";
+  const eMes = erroDeMes(v.ultimaRevisao); if (eMes) erros.ultimaRevisao = eMes;
+  const eData = erroDeData(v.dataExtracao); if (eData) erros.dataExtracao = eData;
   if (!v.filasNaoDisponivel) Object.assign(erros, validarLinhas(FILA_SPEC, v.filas, "filas"));
   return erros;
 }
@@ -104,8 +106,7 @@ export default function Bloco3Form() {
     <BlocoLayout numero={3} motor={motor}>
       {v && (
         <>
-          <Secao id="b3-sistemas" titulo="3.1 Sistema de regulação ambulatorial"
-            ajuda="Marque todos os que o município usa para consultas e exames especializados.">
+          <Secao id="b3-sistemas" titulo="3.1 Quais sistemas o município usa para regular consultas e exames? (marque todos)">
             <Marcaveis rotulo="Sistemas utilizados" opcoes={SISTEMAS_REGULACAO} valor={v.sistemas}
               onChange={(s) => set({ sistemas: s })} erro={e.sistemas} />
             {v.sistemas.includes("PROPRIO") && (
@@ -118,17 +119,17 @@ export default function Bloco3Form() {
             )}
           </Secao>
 
-          <Secao id="b3-fila" titulo="3.2 Como é a fila">
-            <Escolha rotulo="A fila é…" opcoes={TIPOS_FILA} valor={v.tipoFila} onChange={(t) => set({ tipoFila: t })} erro={e.tipoFila} />
-            <Escolha rotulo="A fila tem classificação de risco?" opcoes={SIM_NAO_EM_PARTE} valor={v.classificacaoRisco}
+          <Secao id="b3-fila" titulo="3.2 Sobre a fila">
+            <Escolha rotulo="A fila é única no município ou cada unidade mantém a sua?" opcoes={TIPOS_FILA} valor={v.tipoFila} onChange={(t) => set({ tipoFila: t })} erro={e.tipoFila} />
+            <Escolha rotulo="A fila tem classificação de risco ou prioridade clínica?" opcoes={SIM_NAO_EM_PARTE} valor={v.classificacaoRisco}
               onChange={(t) => set({ classificacaoRisco: t })} erro={e.classificacaoRisco} />
-            <Texto rotulo="Última revisão da fila (mês e ano)" tipo="month" valor={v.ultimaRevisao}
+            <SeletorMesAno rotulo="Quando a fila foi revisada pela última vez (contato com o paciente, retirada de duplicados e de quem já foi atendido)?" valor={v.ultimaRevisao}
               onChange={(t) => set({ ultimaRevisao: t })} erro={e.ultimaRevisao} />
           </Secao>
 
-          <Secao id="b3-tabela" titulo="3.3 Filas por especialidade"
-            ajuda={`Informe até ${MAX_FILAS} filas (as maiores). Os números são os do sistema de regulação, na data da extração.`}>
-            <Texto rotulo="Data em que os números foram extraídos" tipo="date" valor={v.dataExtracao}
+          <Secao id="b3-tabela" titulo="3.3 Pacientes aguardando consulta ou exame, por especialidade ou procedimento"
+            nota="Liste as 15 maiores filas. Tempo de espera em dias, contado da data da solicitação até a data da extração. Se houver código SIGTAP, informe.">
+            <Texto rotulo="Data de extração dos dados da tabela 3.3" tipo="date" valor={v.dataExtracao}
               onChange={(t) => set({ dataExtracao: t })} erro={e.dataExtracao} />
             <NaoDisponivel marcado={v.filasNaoDisponivel} onChange={(m) => set({ filasNaoDisponivel: m })}
               rotulo="Não disponível (não temos esses números)" />

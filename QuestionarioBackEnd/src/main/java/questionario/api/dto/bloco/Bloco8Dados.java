@@ -7,7 +7,9 @@ import questionario.domain.enums.DocumentoAnexavel;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -40,12 +42,15 @@ public record Bloco8Dados(
 
     @Override
     public void validarRegras() {
-        // Sem regras que travem o rascunho.
+        Map<String, String> erros = new LinkedHashMap<>();
+        Normaliza.naoFutura(erros, "assinaturaData", assinaturaData);
+        Normaliza.lancarSeHouver(erros);
     }
 
     @Override
     public List<Pendencia> pendencias() {
         List<Pendencia> lista = new ArrayList<>();
+        Normaliza.exigir(lista, 8, "observacoes", "8.1: responda (se não houver nada a acrescentar, escreva isso)", observacoes);
         if (Normaliza.vazio(assinaturaNome)) lista.add(Pendencia.obrigatorio(8, "assinaturaNome", "Assinatura: informe o nome do(a) secretário(a)"));
         if (assinaturaData == null) lista.add(Pendencia.obrigatorio(8, "assinaturaData", "Assinatura: informe a data"));
         if (!Boolean.TRUE.equals(declaracao)) lista.add(Pendencia.obrigatorio(8, "declaracao", "Assinatura: marque a declaração de que as informações são verdadeiras"));

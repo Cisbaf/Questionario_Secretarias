@@ -70,7 +70,13 @@ export default function RevisaoEnvio() {
 
   return (
     <Box>
-      <Typography variant="h5" component="h2" sx={{ mb: 3 }}>Revisão e envio</Typography>
+      <Typography sx={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", color: "text.secondary", mb: 0.5 }}>
+        ÚLTIMO PASSO
+      </Typography>
+      <Typography variant="h4" component="h2" sx={{ fontWeight: 800 }}>Revisão e envio</Typography>
+      <Typography color="text.secondary" sx={{ mt: 1, mb: 4, pb: 3, borderBottom: 1, borderColor: "divider" }}>
+        Confira o resumo de cada bloco. Quando não houver nada pendente, envie o questionário.
+      </Typography>
 
       {carregando && !respostas && (
         <Stack direction="row" spacing={2} alignItems="center"><CircularProgress size={20} /><Typography>Reunindo as respostas…</Typography></Stack>
@@ -121,7 +127,7 @@ export default function RevisaoEnvio() {
               <ul style={{ margin: 0, paddingLeft: 20 }}>
                 {pendencias.map((p) => (
                   <li key={`${p.bloco}-${p.campo}`}>
-                    <Link href={`/questionario/${uuid}/${p.bloco}`}>Bloco {p.bloco}</Link>: {p.mensagem}
+                    <Link href={`/questionario/${uuid}/${p.bloco}?pendencias=1`}>Bloco {p.bloco}</Link>: {p.mensagem}
                     {p.tipo === "COERENCIA" ? " (números que não batem)" : ""}
                   </li>
                 ))}

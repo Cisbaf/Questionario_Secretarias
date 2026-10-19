@@ -2,6 +2,9 @@ package questionario.api.dto.bloco;
 
 import questionario.exception.DadosInvalidosException;
 
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -50,6 +53,17 @@ final class Normaliza {
         return false;
     }
 
+    /** Falta a resposta: nulo, texto em branco ou conjunto vazio. */
+    static boolean falta(Object valor) {
+        return valor == null || (valor instanceof String s && s.isBlank())
+                || (valor instanceof java.util.Collection<?> c && c.isEmpty());
+    }
+
+    /** Regra "todo campo é obrigatório": acrescenta a pendência se o valor faltar. */
+    static void exigir(List<questionario.api.dto.Pendencia> lista, int bloco, String campo, String mensagem, Object valor) {
+        if (falta(valor)) lista.add(questionario.api.dto.Pendencia.obrigatorio(bloco, campo, mensagem));
+    }
+
     static boolean vazio(String valor) {
         return valor == null || valor.isBlank();
     }
@@ -84,5 +98,28 @@ final class Normaliza {
 
     static boolean maior(Number a, Number b) {
         return a != null && b != null && a.doubleValue() > b.doubleValue();
+    }
+
+    private static final ZoneId FUSO = ZoneId.of("America/Sao_Paulo");
+
+    /** Data de hoje no fuso do consórcio (o servidor pode rodar em outro fuso). */
+    static LocalDate hoje() {
+        return LocalDate.now(FUSO);
+    }
+
+    /** Registra erro se a data estiver no futuro. */
+    static void naoFutura(Map<String, String> erros, String campo, LocalDate data) {
+        if (data != null && data.isAfter(hoje())) erros.putIfAbsent(campo, "A data não pode ser futura");
+    }
+
+    /** Mês e ano "AAAA-MM" não pode ser posterior ao mês atual. */
+    static void mesNaoFuturo(Map<String, String> erros, String campo, String anoMes) {
+        if (anoMes != null && anoMes.matches("\\d{4}-(0[1-9]|1[0-2])") && YearMonth.parse(anoMes).isAfter(YearMonth.from(hoje()))) {
+            erros.putIfAbsent(campo, "O mês não pode ser futuro");
+        }
+    }
+
+    static void lancarSeHouver(Map<String, String> erros) {
+        if (!erros.isEmpty()) throw new DadosInvalidosException(erros);
     }
 }

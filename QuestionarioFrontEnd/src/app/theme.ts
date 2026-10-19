@@ -5,9 +5,9 @@ import { createTheme } from "@mui/material/styles";
 export const theme = createTheme({
   palette: {
     mode: "light",
-    primary: { main: "#155EEF", dark: "#0B3EAD", light: "#E8F0FF" },
+    primary: { main: "#1F6F50", dark: "#154D38", light: "#E4F0EA" },
     secondary: { main: "#F5B700" },
-    background: { default: "#F4F7FB", paper: "#FFFFFF" },
+    background: { default: "#F5F4EF", paper: "#FFFFFF" },
   },
   typography: {
     fontFamily: "Inter, Arial, sans-serif",

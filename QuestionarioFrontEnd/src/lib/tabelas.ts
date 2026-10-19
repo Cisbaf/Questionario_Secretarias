@@ -1,4 +1,5 @@
-import { deNumero, erroDeNumero, numeroOuNulo, soDigitos, textoOuNulo, type TipoNumero } from "@/lib/numeros";
+import { erroDeData } from "@/lib/datas";
+import { deNumero, erroDeNumero, filtrarNumero, numeroOuNulo, soDigitos, textoOuNulo, type TipoNumero } from "@/lib/numeros";
 
 /**
  * Descrição das colunas de uma tabela do questionário. Cada linha do formulário é um Record de textos (como a pessoa
@@ -18,6 +19,8 @@ export type CampoSpec = {
   /** Mostra o campo só na linha fixa com esta chave. */
   soNaChave?: string;
   largo?: boolean;
+  /** Data que pode ser futura (ex.: "Vigente até"). As demais datas não podem. */
+  futura?: boolean;
 };
 
 export type Linha = Record<string, string>;
@@ -60,6 +63,7 @@ export function erroDeCampo(c: CampoSpec, texto: string): string | undefined {
   if (c.tipo === "inteiro" || c.tipo === "decimal" || c.tipo === "dinheiro") return erroDeNumero(texto, c.tipo);
   if (c.tipo === "sigtap") return texto !== "" && !/^\d{10}$/.test(texto) ? "O código SIGTAP tem 10 números" : undefined;
   if (c.tipo === "cnes") return texto !== "" && !/^\d{7}$/.test(texto) ? "O CNES tem 7 números" : undefined;
+  if (c.tipo === "data") return erroDeData(texto, c.futura);
   if (c.tipo === "texto" && c.max && texto.trim().length > c.max) return `Máximo de ${c.max} caracteres`;
   return undefined;
 }
@@ -68,6 +72,8 @@ export function erroDeCampo(c: CampoSpec, texto: string): string | undefined {
 export function filtrarDigitacao(c: CampoSpec, texto: string): string {
   if (c.tipo === "sigtap") return soDigitos(texto, 10);
   if (c.tipo === "cnes") return soDigitos(texto, 7);
+  if (c.tipo === "inteiro" || c.tipo === "decimal" || c.tipo === "dinheiro") return filtrarNumero(texto, c.tipo);
+  if (c.tipo === "texto" && c.max) return texto.slice(0, c.max);
   return texto;
 }
 

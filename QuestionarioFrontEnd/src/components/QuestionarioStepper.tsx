@@ -13,19 +13,23 @@ type Props = {
   passoAtual: number | typeof PASSO_REVISAO;
   /** Situação dos blocos no servidor (null se ainda não carregou ou o servidor está fora do ar). */
   situacao: BlocoSituacao[] | null;
+  /** Blocos com pendência no servidor (null: não foi possível saber). */
+  incompletos: number[] | null;
 };
 
-type Estado = "nao-salvo" | "salvo" | "pendente" | "em-breve";
+type Estado = "nao-salvo" | "salvo" | "andamento" | "pendente" | "em-breve";
 
 const ROTULOS: Record<Estado, string> = {
   "nao-salvo": "Não iniciado",
-  salvo: "Salvo",
+  salvo: "Completo",
+  andamento: "Em andamento",
   pendente: "Alterações não salvas",
   "em-breve": "Em breve",
 };
 const CORES: Record<Estado, string> = {
   "nao-salvo": "text.secondary",
   salvo: "success.main",
+  andamento: "text.secondary",
   pendente: "warning.dark",
   "em-breve": "text.disabled",
 };
@@ -35,7 +39,7 @@ const CORES: Record<Estado, string> = {
 const BOTAO_SEM_MARGEM = { m: 0, px: 1, py: 1 } as const;
 
 /** Os 8 blocos mais a revisão, com a situação de cada um: "Salvo", "Alterações não salvas" ou "Não iniciado". */
-export default function QuestionarioStepper({ uuid, passoAtual, situacao }: Props) {
+export default function QuestionarioStepper({ uuid, passoAtual, situacao, incompletos }: Props) {
   const router = useRouter();
   // Quais blocos têm rascunho local: muda ao digitar (nesta aba) e também quando outra aba do navegador grava.
   const pendentesTexto = useSyncExternalStore(
@@ -53,7 +57,9 @@ export default function QuestionarioStepper({ uuid, passoAtual, situacao }: Prop
 
   function estadoDoBloco(numero: number): Estado {
     if (pendentes.includes(numero)) return "pendente";
-    if (situacao?.find((b) => b.numero === numero)?.version != null) return "salvo";
+    if (situacao?.find((b) => b.numero === numero)?.version != null) {
+      return (incompletos ?? []).includes(numero) ? "andamento" : "salvo";
+    }
     return "nao-salvo";
   }
 

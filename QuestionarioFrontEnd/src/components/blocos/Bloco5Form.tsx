@@ -7,6 +7,7 @@ import { useBlocoQuestionario } from "@/hooks/useBlocoQuestionario";
 import {
   MOTIVOS_SEM_VAGA, NECESSIDADES_PACIENTE, SIM_NAO_PARCIAL, TIPOS_UNIDADE_URGENCIA, type MotivoSemVaga,
 } from "@/lib/rotulos";
+import { erroDeData } from "@/lib/datas";
 import { deNumero, erroDeNumero, numeroOuNulo, textoOuNulo } from "@/lib/numeros";
 import {
   dinamicasDeServidor, dinamicasParaServidor, fixasDeServidor, fixasParaServidor, marcarNaoDisp, num, validarLinhas,
@@ -23,14 +24,14 @@ export const UNIDADE_SPEC: CampoSpec[] = [
   { nome: "cnes", rotulo: "CNES (7 números)", tipo: "cnes" },
   { nome: "tipo", rotulo: "Tipo", tipo: "opcao", opcoes: TIPOS_UNIDADE_URGENCIA },
   { nome: "leitosObservacao", rotulo: "Leitos de observação", tipo: "inteiro" },
-  { nome: "pacientes24h", rotulo: "Pacientes há mais de 24 h aguardando vaga", tipo: "inteiro" },
-  { nome: "pacientes72h", rotulo: "Pacientes há mais de 72 h aguardando vaga", tipo: "inteiro" },
+  { nome: "pacientes24h", rotulo: "Pacientes no censo há mais de 24 h", tipo: "inteiro" },
+  { nome: "pacientes72h", rotulo: "Destes, há mais de 72 h", tipo: "inteiro" },
   { nome: "ventilacaoMecanica", rotulo: "Em ventilação mecânica", tipo: "inteiro" },
 ];
 
 export const PERFIL_SPEC: CampoSpec[] = [
   { nome: "pacientes", rotulo: "Pacientes aguardando", tipo: "inteiro" },
-  { nome: "diagnosticos", rotulo: "Principais diagnósticos (sem nome de paciente)", tipo: "texto", max: 300, largo: true },
+  { nome: "diagnosticos", rotulo: "Principais diagnósticos (CID-10)", tipo: "texto", max: 300, largo: true },
 ];
 
 export type Bloco5Valores = {
@@ -95,6 +96,7 @@ export function validarBloco5(v: Bloco5Valores): Record<string, string> {
   const erros: Record<string, string> = {};
   if (v.perfilOutroDescricao.trim().length > 150) erros.perfilOutroDescricao = "Máximo de 150 caracteres";
   if (v.motivoOutro.trim().length > 300) erros.motivoOutro = "Máximo de 300 caracteres";
+  const d1 = erroDeData(v.dataExtracaoUnidades); if (d1) erros.dataExtracaoUnidades = d1;
   if (!v.unidadesNaoDisponivel) Object.assign(erros, validarLinhas(UNIDADE_SPEC, v.unidades, "unidades"));
   if (!v.perfilNaoDisponivel) {
     Object.assign(erros, validarLinhas(PERFIL_SPEC, v.perfil.linhas.map((l, i) => (v.perfil.naoDisp[i] ? Object.fromEntries(Object.keys(l).map((k) => [k, ""])) : l)), "perfil"));
@@ -138,7 +140,7 @@ export default function Bloco5Form() {
             descrições gerais (LGPD).
           </Alert>
 
-          <Secao id="b5-unidades" titulo="5.1 Unidades de urgência"
+          <Secao id="b5-unidades" titulo="5.1 Unidades de urgência do município"
             ajuda={`Até ${MAX_UNIDADES} unidades. Os números vêm do levantamento da data abaixo.`}>
             <Texto rotulo="Data do levantamento" tipo="date" valor={v.dataExtracaoUnidades}
               onChange={(t) => set({ dataExtracaoUnidades: t })} erro={e.dataExtracaoUnidades} />
@@ -149,7 +151,7 @@ export default function Bloco5Form() {
               desabilitado={v.unidadesNaoDisponivel} avisos={avisosBloco5(v)} />
           </Secao>
 
-          <Secao id="b5-perfil" titulo="5.2 Do que os pacientes aguardando vaga precisam"
+          <Secao id="b5-perfil" titulo="5.2 Perfil dos pacientes retidos no censo (soma de todas as unidades)"
             ajuda="Conte os pacientes que estão aguardando vaga no levantamento, por necessidade.">
             <NaoDisponivel marcado={v.perfilNaoDisponivel} onChange={(m) => set({ perfilNaoDisponivel: m })}
               rotulo="Não disponível (não temos esses números)" />
@@ -167,24 +169,24 @@ export default function Bloco5Form() {
             />
           </Secao>
 
-          <Secao id="b5-indicadores" titulo="5.3 Indicadores">
+          <Secao id="b5-indicadores" titulo="5.3 No período de referência">
             <NaoDisponivel marcado={ind} onChange={(m) => set({ indicadoresNaoDisponivel: m })}
               rotulo="Não disponível (não temos esses números)" />
             <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", marginTop: 8 }}>
-              <Texto rotulo="Pacientes há mais de 24 h aguardando vaga" valor={v.pacientesMais24h} desabilitado={ind}
+              <Texto rotulo="Pacientes há mais de 24 h aguardando vaga" valor={v.pacientesMais24h} desabilitado={ind} numerico="inteiro"
                 onChange={(t) => set({ pacientesMais24h: t })} erro={e.pacientesMais24h} />
-              <Texto rotulo="Tempo médio de permanência (horas)" valor={v.tempoMedioPermanenciaHoras} desabilitado={ind}
+              <Texto rotulo="Tempo médio de permanência (horas)" valor={v.tempoMedioPermanenciaHoras} desabilitado={ind} numerico="decimal"
                 onChange={(t) => set({ tempoMedioPermanenciaHoras: t })} erro={e.tempoMedioPermanenciaHoras} />
-              <Texto rotulo="Óbitos aguardando vaga no período" valor={v.obitosAguardandoVaga} desabilitado={ind}
+              <Texto rotulo="Óbitos aguardando vaga no período" valor={v.obitosAguardandoVaga} desabilitado={ind} numerico="inteiro"
                 onChange={(t) => set({ obitosAguardandoVaga: t })} erro={e.obitosAguardandoVaga} />
-              <Texto rotulo="Altas sem o procedimento necessário" valor={v.altaSemProcedimento} desabilitado={ind}
+              <Texto rotulo="Altas sem o procedimento necessário" valor={v.altaSemProcedimento} desabilitado={ind} numerico="inteiro"
                 onChange={(t) => set({ altaSemProcedimento: t })} erro={e.altaSemProcedimento} />
             </div>
             <Escolha rotulo="O registro dessas permanências é informatizado?" opcoes={SIM_NAO_PARCIAL}
               valor={v.registroInformatizado} onChange={(t) => set({ registroInformatizado: t })} erro={e.registroInformatizado} />
           </Secao>
 
-          <Secao id="b5-motivos" titulo="5.4 Por que o paciente fica sem vaga">
+          <Secao id="b5-motivos" titulo="5.4 Na sua avaliação, por que esses pacientes não conseguem vaga?">
             <Marcaveis rotulo="Marque os motivos mais frequentes" opcoes={MOTIVOS_SEM_VAGA} valor={v.motivos}
               onChange={(m) => set({ motivos: m })} erro={e.motivos} />
             {v.motivos.includes("OUTRO") && (

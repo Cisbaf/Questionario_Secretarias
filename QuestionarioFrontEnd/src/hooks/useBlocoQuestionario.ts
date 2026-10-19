@@ -3,8 +3,9 @@
 import { ApiError, getJson, putJson } from "@/lib/api";
 import { MENSAGEM_SEM_SERVIDOR, mensagemDeErro, naoEncontrado } from "@/lib/erros";
 import { apagarRascunho, gravarRascunho, lerRascunho, type RascunhoLocal } from "@/lib/rascunhoLocal";
-import type { RespostaDoBloco } from "@/types";
-import { useCallback, useEffect, useRef, useState } from "react";
+import type { Pendencia, RespostaDoBloco } from "@/types";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /**
  * Motor de um bloco do questionário: junta o que está no servidor, o rascunho do localStorage e o que a pessoa está
@@ -57,6 +58,12 @@ export function useBlocoQuestionario<T extends object, R extends RespostaDoBloco
   const [mostrarErros, setMostrarErros] = useState(false);
   const [conflito, setConflito] = useState("");
   const [semArmazenamento, setSemArmazenamento] = useState(false);
+  // O que ainda falta neste bloco para poder enviar (vem do servidor, o mesmo que a tela de revisão usa).
+  const [pendencias, setPendencias] = useState<Pendencia[]>([]);
+  // Marca os campos em falta só depois que a pessoa pediu para ver (link da revisão) ou tentou salvar o bloco.
+  const [tentouSalvar, setTentouSalvar] = useState(false);
+  const pediuPendencias = useSearchParams().has("pendencias");
+  const mostrarPendencias = tentouSalvar || pediuPendencias;
 
   // Espelhos síncronos do estado, para callbacks e para o que roda ao sair da página.
   const valoresRef = useRef<T | null>(null);
@@ -72,6 +79,15 @@ export function useBlocoQuestionario<T extends object, R extends RespostaDoBloco
     setSujo(marcarSujo);
   };
 
+  const carregarPendencias = useCallback(async () => {
+    try {
+      const todas = await getJson<Pendencia[]>(`/questionarios/${encodeURIComponent(uuid)}/pendencias`);
+      setPendencias(todas.filter((p) => p.bloco === numero));
+    } catch {
+      // sem servidor: a lista só some; o resto do bloco continua funcionando
+    }
+  }, [uuid, numero]);
+
   const carregar = useCallback(async () => {
     setFase("carregando");
     setErroCarga("");
@@ -83,6 +99,7 @@ export function useBlocoQuestionario<T extends object, R extends RespostaDoBloco
       setServidor({ version: resposta.version, atualizadoEm: resposta.atualizadoEm });
       versaoBaseRef.current = resposta.version;
       setOffline(false);
+      void carregarPendencias();
       aplicarValores(doServidor, false);
       if (rascunho && rascunho.baseVersion === resposta.version
         && JSON.stringify(rascunho.data) === JSON.stringify(doServidor)) {
@@ -107,7 +124,7 @@ export function useBlocoQuestionario<T extends object, R extends RespostaDoBloco
         setFase("erro");
       }
     }
-  }, [uuid, numero, caminho]);
+  }, [uuid, numero, caminho, carregarPendencias]);
 
   useEffect(() => {
     void carregar();
@@ -146,7 +163,8 @@ export function useBlocoQuestionario<T extends object, R extends RespostaDoBloco
     if (!atual) return;
     const novo = typeof proximo === "function" ? (proximo as (atual: T) => T)(atual) : proximo;
     aplicarValores(novo, true);
-    if (mostrarErrosRef.current) setErrosCampos(opcoesRef.current.validar(novo));
+    // Validação ao vivo: o erro aparece (e some) enquanto a pessoa digita, sem esperar o "Salvar".
+    setErrosCampos(opcoesRef.current.validar(novo));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -155,6 +173,7 @@ export function useBlocoQuestionario<T extends object, R extends RespostaDoBloco
     if (!enviados || salvandoRef.current) return false;
     const { validar, paraServidor, deServidor, aoSalvar } = opcoesRef.current;
 
+    setTentouSalvar(true);
     // 1) local primeiro, sempre: mesmo com erro de validação ou de rede o que foi digitado fica guardado.
     const guardado = persistirLocal();
     setSemArmazenamento(!guardado);
@@ -189,6 +208,7 @@ export function useBlocoQuestionario<T extends object, R extends RespostaDoBloco
         // A pessoa continuou digitando durante o salvamento: preserva o que ela digitou e o guarda de novo.
         setSemArmazenamento(!persistirLocal());
       }
+      void carregarPendencias();
       aoSalvar?.();
       return true;
     } catch (error) {
@@ -211,7 +231,7 @@ export function useBlocoQuestionario<T extends object, R extends RespostaDoBloco
       salvandoRef.current = false;
       setSalvando(false);
     }
-  }, [uuid, numero, caminho, persistirLocal]);
+  }, [uuid, numero, caminho, persistirLocal, carregarPendencias]);
 
   /** Conflito de versão, opção 1: descarta o rascunho local e mostra o que está no servidor. */
   const recarregarDoServidor = useCallback(async () => {
@@ -255,6 +275,13 @@ export function useBlocoQuestionario<T extends object, R extends RespostaDoBloco
     setDecisaoRascunho(null);
   }, [uuid, numero]);
 
+  const errosComPendencias = useMemo(() => {
+    if (!mostrarPendencias) return errosCampos;
+    const daPendencia: Record<string, string> = {};
+    for (const p of pendencias) daPendencia[p.campo] ??= p.mensagem.replace(/^[\d.]+(, linha \d+)?:\s*/, "");
+    return { ...daPendencia, ...errosCampos };
+  }, [mostrarPendencias, pendencias, errosCampos]);
+
   return {
     fase,
     erroCarga,
@@ -265,7 +292,9 @@ export function useBlocoQuestionario<T extends object, R extends RespostaDoBloco
     salvando,
     salvar,
     erroSalvar,
-    errosCampos,
+    // Erros digitados/do servidor sempre mandam; as pendências só preenchem os campos que ainda não têm erro.
+    errosCampos: errosComPendencias,
+    pendencias,
     conflito,
     recarregarDoServidor,
     sobrescrever,

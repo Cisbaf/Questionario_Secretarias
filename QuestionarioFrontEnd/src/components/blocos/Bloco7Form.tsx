@@ -18,8 +18,8 @@ export const REPASSE_SPEC: CampoSpec[] = [
   { nome: "atoNumero", rotulo: "Número do ato (portaria, resolução, termo)", tipo: "texto", max: 100 },
   { nome: "atoData", rotulo: "Data do ato", tipo: "data" },
   { nome: "valorMensal", rotulo: "Valor mensal (R$)", tipo: "dinheiro" },
-  { nome: "vigenciaAte", rotulo: "Vigente até", tipo: "data" },
-  { nome: "repasseEmDia", rotulo: "O repasse está em dia?", tipo: "opcao", opcoes: SIM_NAO_PARCIAL },
+  { nome: "vigenciaAte", rotulo: "Vigência (até)", tipo: "data", futura: true },
+  { nome: "repasseEmDia", rotulo: "Repasse em dia?", tipo: "opcao", opcoes: SIM_NAO_PARCIAL },
   { nome: "observacao", rotulo: "Observação", tipo: "texto", max: 500, largo: true },
 ];
 
@@ -27,8 +27,8 @@ export const LEITO_PRIVADO_SPEC: CampoSpec[] = [
   { nome: "hospital", rotulo: "Hospital", tipo: "texto", max: 200, largo: true },
   { nome: "cnes", rotulo: "CNES (7 números)", tipo: "cnes" },
   { nome: "tipoLeito", rotulo: "Tipo de leito", tipo: "opcao", opcoes: TIPOS_LEITO_PRIVADO },
-  { nome: "contratadosSus", rotulo: "Leitos contratados pelo SUS", tipo: "inteiro" },
-  { nome: "poderiamSerContratados", rotulo: "Leitos que poderiam ser contratados", tipo: "inteiro" },
+  { nome: "contratadosSus", rotulo: "Já contratados pelo SUS", tipo: "inteiro" },
+  { nome: "poderiamSerContratados", rotulo: "Poderiam ser contratados", tipo: "inteiro" },
   { nome: "valorDiaria", rotulo: "Valor da diária (R$)", tipo: "dinheiro" },
   { nome: "observacao", rotulo: "Observação", tipo: "texto", max: 500, largo: true },
 ];
@@ -109,15 +109,17 @@ export default function Bloco7Form() {
     <BlocoLayout numero={7} motor={motor}>
       {v && (
         <>
-          <Secao id="b7-repasses" titulo="7.1 Repasses do município às unidades"
-            ajuda={`Até ${MAX_LINHAS} unidades que recebem repasse financeiro do município.`}>
+          <Secao id="b7-repasses" titulo="7.1 Repasses estaduais de custeio que o município recebe hoje"
+            nota="Inclua o cofinanciamento de hospitais, maternidades, UPAs e policlínicas e a contrapartida estadual do SAMU. Informe o ato (resolução SES ou deliberação CIB-RJ) e, se possível, anexe o documento."
+            ajuda={`Até ${MAX_LINHAS} linhas.`}>
             <NaoDisponivel marcado={v.repassesNaoDisponivel} onChange={(m) => set({ repassesNaoDisponivel: m })}
               rotulo="Não disponível (não temos essa informação)" />
             <TabelaDinamica nome="repasses" titulo="Repasse" specs={REPASSE_SPEC} linhas={v.repasses}
               onChange={(l) => set({ repasses: l })} limite={MAX_LINHAS} erros={e} desabilitado={v.repassesNaoDisponivel} />
           </Secao>
 
-          <Secao id="b7-leitos" titulo="7.2 Leitos em hospitais privados e filantrópicos"
+          <Secao id="b7-leitos" titulo="7.2 Leitos de hospitais privados e filantrópicos no município"
+            nota="Leitos que o município já contrata pelo SUS e leitos que poderiam ser contratados, por tipo (clínico, cirúrgico, UTI adulto, pediátrico, obstétrico, outro)."
             ajuda={`Até ${MAX_LINHAS} linhas. Uma linha por hospital e tipo de leito.`}>
             <NaoDisponivel marcado={v.leitosPrivadosNaoDisponivel} onChange={(m) => set({ leitosPrivadosNaoDisponivel: m })}
               rotulo="Não disponível (não temos essa informação)" />
@@ -126,8 +128,9 @@ export default function Bloco7Form() {
               desabilitado={v.leitosPrivadosNaoDisponivel} />
           </Secao>
 
-          <Secao id="b7-aparelhos" titulo="7.3 Tomógrafos e ressonâncias"
-            ajuda={`Até ${MAX_LINHAS} linhas. Compare o que o CNES diz com o que funciona de fato.`}>
+          <Secao id="b7-aparelhos" titulo="7.3 Conferência dos aparelhos de imagem cadastrados no CNES"
+            nota="Confira se os tomógrafos e as ressonâncias que o CNES mostra no município existem, estão em uso e atendem o SUS. Aponte cadastros a corrigir, como aparelhos repetidos ou tomógrafos odontológicos registrados como tomógrafo de uso geral."
+            ajuda={`Até ${MAX_LINHAS} linhas.`}>
             <NaoDisponivel marcado={v.aparelhosNaoDisponivel} onChange={(m) => set({ aparelhosNaoDisponivel: m })}
               rotulo="Não disponível (não temos essa informação)" />
             <TabelaDinamica nome="aparelhos" titulo="Aparelho" specs={APARELHO_SPEC} linhas={v.aparelhos}

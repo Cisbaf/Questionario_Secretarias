@@ -1,5 +1,7 @@
 "use client";
 
+import { hojeIso, mesAtualIso } from "@/lib/datas";
+import { filtrarNumero, type TipoNumero } from "@/lib/numeros";
 import { campoVisivel, filtrarDigitacao, type CampoSpec, type Linha } from "@/lib/tabelas";
 import {
   Alert, Box, Button, Card, Checkbox, FormControl, FormControlLabel, FormGroup, FormHelperText, FormLabel, IconButton,
@@ -9,10 +11,11 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import AddIcon from "@mui/icons-material/Add";
 import type { ReactNode } from "react";
 
-export function Secao({ id, titulo, ajuda, children }: { id: string; titulo: string; ajuda?: string; children: ReactNode }) {
+export function Secao({ id, titulo, ajuda, nota, children }: { id: string; titulo: string; ajuda?: string; nota?: string; children: ReactNode }) {
   return (
     <Box component="section" aria-labelledby={id} sx={{ mb: 5 }}>
       <Typography id={id} variant="h6" component="h3" sx={{ mb: 0.5 }}>{titulo}</Typography>
+      {nota && <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontStyle: "italic" }}>{nota}</Typography>}
       {ajuda && <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{ajuda}</Typography>}
       {children}
     </Box>
@@ -64,15 +67,19 @@ export function Marcaveis<T extends string>({ rotulo, opcoes, valor, onChange, e
   );
 }
 
-export function Texto({ rotulo, valor, onChange, erro, max, multiline, desabilitado, tipo, ajuda, minimo }: {
+export function Texto({ rotulo, valor, onChange, erro, max, multiline, desabilitado, tipo, ajuda, minimo, numerico, futura }: {
   rotulo: string; valor: string; onChange: (v: string) => void; erro?: string; max?: number; multiline?: boolean;
   desabilitado?: boolean; tipo?: "date" | "month"; ajuda?: string; minimo?: number;
+  /** Campo de número: letras e símbolos nem entram. */
+  numerico?: TipoNumero;
+  /** Data que pode ser futura. Por padrão, datas e meses não passam de hoje. */
+  futura?: boolean;
 }) {
   return (
     <TextField
       label={rotulo}
       value={valor}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => onChange(numerico ? filtrarNumero(e.target.value, numerico) : e.target.value)}
       error={!!erro}
       helperText={erro ?? ajuda}
       disabled={desabilitado}
@@ -81,11 +88,47 @@ export function Texto({ rotulo, valor, onChange, erro, max, multiline, desabilit
       minRows={multiline ? (minimo ?? 4) : undefined}
       type={tipo}
       slotProps={{
-        htmlInput: max ? { maxLength: max + 50 } : undefined,
+        htmlInput: {
+          ...(max ? { maxLength: max } : {}),
+          ...(tipo && !futura ? { max: tipo === "date" ? hojeIso() : hojeIso().slice(0, 7) } : {}),
+          ...(numerico ? { inputMode: numerico === "inteiro" ? "numeric" : "decimal" } : {}),
+        },
         inputLabel: tipo ? { shrink: true } : undefined,
       }}
       sx={{ mb: 2 }}
     />
+  );
+}
+
+const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
+/** Mês e ano escolhidos em duas listas (nada de digitar "AAAA-MM"). O valor é "AAAA-MM"; pela metade vira "2026-" ou "-09". */
+export function SeletorMesAno({ rotulo, valor, onChange, erro, desabilitado, anosParaTras = 10 }: {
+  rotulo: string; valor: string; onChange: (v: string) => void; erro?: string; desabilitado?: boolean; anosParaTras?: number;
+}) {
+  const [anoAtual, mesAtual] = mesAtualIso().split("-").map(Number);
+  const [ano, mes] = valor.includes("-") ? valor.split("-") : ["", ""];
+  const anos = Array.from({ length: anosParaTras + 1 }, (_, i) => String(anoAtual - i));
+  const mudar = (a: string, m: string) => onChange(a === "" && m === "" ? "" : `${a}-${m}`);
+  return (
+    <FormControl error={!!erro} disabled={desabilitado} sx={{ mb: 2, display: "block" }} component="fieldset">
+      <FormLabel component="legend" sx={{ mb: 1 }}>{rotulo}</FormLabel>
+      <Stack direction="row" spacing={2}>
+        <TextField select label="Mês" value={mes} onChange={(e) => mudar(ano, e.target.value)} error={!!erro}
+          sx={{ minWidth: 160 }} slotProps={{ select: { displayEmpty: false } }}>
+          <MenuItem value=""><em>Escolha…</em></MenuItem>
+          {MESES.map((nome, i) => {
+            const m = String(i + 1).padStart(2, "0");
+            return <MenuItem key={m} value={m} disabled={ano === String(anoAtual) && i + 1 > mesAtual}>{nome}</MenuItem>;
+          })}
+        </TextField>
+        <TextField select label="Ano" value={ano} onChange={(e) => mudar(e.target.value, mes)} error={!!erro} sx={{ minWidth: 120 }}>
+          <MenuItem value=""><em>Escolha…</em></MenuItem>
+          {anos.map((a) => <MenuItem key={a} value={a}>{a}</MenuItem>)}
+        </TextField>
+      </Stack>
+      {erro && <FormHelperText>{erro}</FormHelperText>}
+    </FormControl>
   );
 }
 
@@ -117,7 +160,8 @@ function CampoDaLinha({ c, linha, onChange, erro, desabilitado }: {
   }
   if (c.tipo === "data") {
     return (
-      <TextField {...comum} type="date" slotProps={{ inputLabel: { shrink: true } }}
+      <TextField {...comum} type="date"
+        slotProps={{ inputLabel: { shrink: true }, htmlInput: c.futura ? undefined : { max: hojeIso() } }}
         onChange={(e) => onChange(c.nome, e.target.value)} />
     );
   }
@@ -126,7 +170,7 @@ function CampoDaLinha({ c, linha, onChange, erro, desabilitado }: {
     <TextField
       {...comum}
       onChange={(e) => onChange(c.nome, filtrarDigitacao(c, e.target.value))}
-      slotProps={{ htmlInput: { inputMode: numerico ? (c.tipo === "inteiro" || c.tipo === "sigtap" || c.tipo === "cnes" ? "numeric" : "decimal") : "text" } }}
+      slotProps={{ htmlInput: { maxLength: c.max, inputMode: numerico ? (c.tipo === "inteiro" || c.tipo === "sigtap" || c.tipo === "cnes" ? "numeric" : "decimal") : "text" } }}
     />
   );
 }

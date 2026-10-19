@@ -43,6 +43,9 @@ export function QuadroDeDatas({ levantamento }: { levantamento: Levantamento }) 
         <Campo rotulo="Prazo de devolução" valor={formatarData(levantamento.prazoDevolucao)} />
         <Campo rotulo="Enviar para" valor={levantamento.enviarPara} />
       </Box>
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 2, fontStyle: "italic" }}>
+        Campos a serem definidos pela equipe técnica antes do envio.
+      </Typography>
     </Paper>
   );
 }

@@ -10,7 +10,7 @@ import type { RespostaDoBloco } from "@/types";
 import { Alert, Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 
 /**
  * O que a moldura precisa do motor. Fica de fora tudo que depende dos campos do bloco (alterar, os valores
@@ -41,6 +41,15 @@ export default function BlocoLayout({ numero, motor, children }: Props) {
   const router = useRouter();
   const info = BLOCOS[numero - 1];
 
+  // O botão "Salvar rascunho" do topo da página pede para salvar o bloco aberto.
+  const salvarBloco = motor.salvar;
+  useEffect(() => {
+    if (enviado) return;
+    const aoPedir = () => void salvarBloco();
+    window.addEventListener("qsms:salvar", aoPedir);
+    return () => window.removeEventListener("qsms:salvar", aoPedir);
+  }, [salvarBloco, enviado]);
+
   /** Recarrega o bloco e, junto, a situação dos blocos do Stepper (o servidor pode ter voltado). */
   function tentarDeNovo() {
     void motor.recarregar();
@@ -55,9 +64,15 @@ export default function BlocoLayout({ numero, motor, children }: Props) {
 
   return (
     <Box>
-      <Typography variant="h5" component="h2" sx={{ mb: 3 }}>
-        Bloco {numero} — {info.titulo}
+      <Typography sx={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", color: "text.secondary", mb: 0.5 }}>
+        BLOCO {String(numero).padStart(2, "0")} / 08
       </Typography>
+      <Typography variant="h4" component="h2" sx={{ fontWeight: 800 }}>{info.titulo}</Typography>
+      <Box sx={{ mt: 1, mb: 4, pb: 3, borderBottom: 1, borderColor: "divider" }}>
+        <Typography color="text.secondary">{info.descricao}</Typography>
+        {info.nota && <Typography color="text.secondary" sx={{ mt: 1.5, fontStyle: "italic" }}>{info.nota}</Typography>}
+        {info.introducao?.map((p) => <Typography key={p} sx={{ mt: 1.5 }}>{p}</Typography>)}
+      </Box>
 
       {motor.fase === "carregando" && (
         <Stack direction="row" spacing={2} alignItems="center">
@@ -86,6 +101,21 @@ export default function BlocoLayout({ numero, motor, children }: Props) {
             >
               Sem conexão com o servidor. Você está vendo as alterações guardadas neste navegador; elas só serão
               salvas quando a conexão voltar.
+            </Alert>
+          )}
+
+          {!enviado && motor.pendencias.length > 0 && (
+            <Alert severity="warning" sx={{ mb: 3 }} data-testid="pendencias-do-bloco">
+              <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                Para poder enviar o questionário, ainda falta{motor.pendencias.length === 1 ? " 1 ponto" : `m ${motor.pendencias.length} pontos`} neste bloco:
+              </Typography>
+              <ul style={{ margin: 0, paddingLeft: 20 }}>
+                {motor.pendencias.map((p) => (
+                  <li key={p.campo}>
+                    {p.mensagem}{p.tipo === "COERENCIA" ? " (números que não batem)" : ""}
+                  </li>
+                ))}
+              </ul>
             </Alert>
           )}
 

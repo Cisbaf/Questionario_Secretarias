@@ -14,7 +14,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -122,23 +124,64 @@ public record Bloco5Dados(
     @Override
     public void validarRegras() {
         Normaliza.semRepetidas(perfil, Perfil::necessidade, "perfil");
+        Map<String, String> erros = new LinkedHashMap<>();
+        Normaliza.naoFutura(erros, "dataExtracaoUnidades", dataExtracaoUnidades);
+        Normaliza.lancarSeHouver(erros);
     }
 
     @Override
     public List<Pendencia> pendencias() {
         List<Pendencia> lista = new ArrayList<>();
+        boolean semUnidades = Boolean.TRUE.equals(unidadesNaoDisponivel);
         boolean temUnidade = unidades != null && unidades.stream().anyMatch(u -> u != null && u.preenchida());
-        if (!temUnidade && !Boolean.TRUE.equals(unidadesNaoDisponivel)) {
+        if (!temUnidade && !semUnidades) {
             lista.add(Pendencia.obrigatorio(5, "unidades", "5.1: informe ao menos uma unidade ou marque \"Não disponível\""));
         }
-        boolean temPerfil = perfil != null && perfil.stream().anyMatch(p -> p != null && (p.preenchido() || Boolean.TRUE.equals(p.naoDisponivel())));
-        if (!temPerfil && !Boolean.TRUE.equals(perfilNaoDisponivel)) {
-            lista.add(Pendencia.obrigatorio(5, "perfil", "5.2: preencha ao menos uma linha ou marque \"Não disponível\""));
+        if (!semUnidades) {
+            Normaliza.exigir(lista, 5, "dataExtracaoUnidades", "5.1: informe a data de extração dos dados", dataExtracaoUnidades);
+            if (unidades != null) {
+                for (int i = 0; i < unidades.size(); i++) {
+                    Unidade u = unidades.get(i);
+                    if (u == null || !u.preenchida()) continue;
+                    String p = "unidades[" + i + "].";
+                    String r = "5.1, unidade " + (i + 1) + ": ";
+                    Normaliza.exigir(lista, 5, p + "nome", r + "informe o nome da unidade", u.nome());
+                    Normaliza.exigir(lista, 5, p + "cnes", r + "informe o CNES", u.cnes());
+                    Normaliza.exigir(lista, 5, p + "tipo", r + "informe o tipo da unidade", u.tipo());
+                    Normaliza.exigir(lista, 5, p + "leitosObservacao", r + "informe os leitos de observação", u.leitosObservacao());
+                    Normaliza.exigir(lista, 5, p + "pacientes24h", r + "informe os pacientes há mais de 24 h", u.pacientes24h());
+                    Normaliza.exigir(lista, 5, p + "pacientes72h", r + "informe quantos destes estão há mais de 72 h", u.pacientes72h());
+                    Normaliza.exigir(lista, 5, p + "ventilacaoMecanica", r + "informe os pacientes em ventilação mecânica", u.ventilacaoMecanica());
+                }
+            }
         }
-        boolean temIndicador = Normaliza.preenchido(pacientesMais24h, tempoMedioPermanenciaHoras, obitosAguardandoVaga,
-                altaSemProcedimento, registroInformatizado);
-        if (!temIndicador && !Boolean.TRUE.equals(indicadoresNaoDisponivel)) {
-            lista.add(Pendencia.obrigatorio(5, "pacientesMais24h", "5.3: preencha ao menos um indicador ou marque \"Não disponível\""));
+        if (!Boolean.TRUE.equals(perfilNaoDisponivel) && perfil != null) {
+            for (int i = 0; i < perfil.size(); i++) {
+                Perfil pf = perfil.get(i);
+                if (pf == null || pf.necessidade() == null || Boolean.TRUE.equals(pf.naoDisponivel())) continue;
+                boolean outro = pf.necessidade() == NecessidadePaciente.OUTRO;
+                // A linha "Outro" é opcional; começou a preencher, tem que completar.
+                if (outro && !pf.preenchido() && Normaliza.vazio(perfilOutroDescricao)) continue;
+                String p = "perfil[" + i + "].";
+                String r = "5.2, " + (outro ? "linha \"Outro\"" : "linha " + (i + 1)) + ": ";
+                if (!outro && !pf.preenchido()) {
+                    lista.add(Pendencia.obrigatorio(5, p + "pacientes", r + "preencha a linha ou marque \"Não disponível\""));
+                    continue;
+                }
+                if (outro) Normaliza.exigir(lista, 5, "perfilOutroDescricao", r + "descreva a necessidade", perfilOutroDescricao);
+                Normaliza.exigir(lista, 5, p + "pacientes", r + "informe o número de pacientes (0 se não houver; ou marque \"Não disponível\" na linha)", pf.pacientes());
+                // Sem pacientes não há diagnóstico a informar.
+                if (pf.pacientes() == null || pf.pacientes() > 0) {
+                    Normaliza.exigir(lista, 5, p + "diagnosticos", r + "informe os principais diagnósticos (CID-10)", pf.diagnosticos());
+                }
+            }
+        }
+        if (!Boolean.TRUE.equals(indicadoresNaoDisponivel)) {
+            Normaliza.exigir(lista, 5, "pacientesMais24h", "5.3: informe os pacientes que ficaram mais de 24 h aguardando vaga (ou marque \"Não disponível\")", pacientesMais24h);
+            Normaliza.exigir(lista, 5, "tempoMedioPermanenciaHoras", "5.3: informe o tempo médio de permanência", tempoMedioPermanenciaHoras);
+            Normaliza.exigir(lista, 5, "obitosAguardandoVaga", "5.3: informe os óbitos de quem aguardava vaga", obitosAguardandoVaga);
+            Normaliza.exigir(lista, 5, "altaSemProcedimento", "5.3: informe as altas sem o procedimento indicado", altaSemProcedimento);
+            Normaliza.exigir(lista, 5, "registroInformatizado", "5.3: informe se há registro informatizado do tempo de permanência", registroInformatizado);
         }
         if (motivos == null || motivos.isEmpty()) {
             lista.add(Pendencia.obrigatorio(5, "motivos", "5.4: marque ao menos um motivo"));

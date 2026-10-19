@@ -12,7 +12,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /** Bloco 3 do documento: fila da regulação ambulatorial (itens 3.1 a 3.3). */
@@ -78,7 +80,10 @@ public record Bloco3Dados(
 
     @Override
     public void validarRegras() {
-        // Sem regras entre campos que travem o rascunho: as coerências do 3.3 só avisam (ver pendencias()).
+        Map<String, String> erros = new LinkedHashMap<>();
+        Normaliza.naoFutura(erros, "dataExtracao", dataExtracao);
+        Normaliza.mesNaoFuturo(erros, "ultimaRevisao", ultimaRevisao);
+        Normaliza.lancarSeHouver(erros);
     }
 
     @Override
@@ -93,11 +98,29 @@ public record Bloco3Dados(
         if (sistemas != null && sistemas.contains(SistemaRegulacao.OUTRO) && Normaliza.vazio(sistemaOutroNome)) {
             lista.add(Pendencia.obrigatorio(3, "sistemaOutroNome", "3.1: descreva o outro sistema"));
         }
-        if (tipoFila == null) lista.add(Pendencia.obrigatorio(3, "tipoFila", "3.2: informe se a fila é única, por unidade ou mista"));
-        if (classificacaoRisco == null) lista.add(Pendencia.obrigatorio(3, "classificacaoRisco", "3.2: informe se a fila tem classificação de risco"));
+        Normaliza.exigir(lista, 3, "tipoFila", "3.2: informe se a fila é única, por unidade ou mista", tipoFila);
+        Normaliza.exigir(lista, 3, "classificacaoRisco", "3.2: informe se a fila tem classificação de risco", classificacaoRisco);
+        Normaliza.exigir(lista, 3, "ultimaRevisao", "3.2: informe o mês e o ano da última revisão da fila", ultimaRevisao);
+        boolean semFilas = Boolean.TRUE.equals(filasNaoDisponivel);
         boolean temFila = filas != null && filas.stream().anyMatch(f -> f != null && f.preenchida());
-        if (!temFila && !Boolean.TRUE.equals(filasNaoDisponivel)) {
+        if (!temFila && !semFilas) {
             lista.add(Pendencia.obrigatorio(3, "filas", "3.3: preencha ao menos uma fila ou marque \"Não disponível\""));
+        }
+        if (!semFilas) Normaliza.exigir(lista, 3, "dataExtracao", "3.3: informe a data de extração dos dados", dataExtracao);
+        if (filas != null && !semFilas) {
+            for (int i = 0; i < filas.size(); i++) {
+                Fila f = filas.get(i);
+                if (f == null || !f.preenchida()) continue;
+                String p = "filas[" + i + "].";
+                String l = "3.3, linha " + (i + 1) + ": ";
+                Normaliza.exigir(lista, 3, p + "especialidade", l + "informe a especialidade ou o exame", f.especialidade());
+                // O código SIGTAP é opcional ("se houver").
+                Normaliza.exigir(lista, 3, p + "totalAguardando", l + "informe o total aguardando", f.totalAguardando());
+                Normaliza.exigir(lista, 3, p + "prioridadeAlta", l + "informe quantos têm prioridade alta", f.prioridadeAlta());
+                Normaliza.exigir(lista, 3, p + "esperaMediaDias", l + "informe a espera média", f.esperaMediaDias());
+                Normaliza.exigir(lista, 3, p + "maiorEsperaDias", l + "informe a maior espera", f.maiorEsperaDias());
+                Normaliza.exigir(lista, 3, p + "aguardandoMais180", l + "informe quantos aguardam há mais de 180 dias", f.aguardandoMais180());
+            }
         }
         if (filas != null) {
             for (int i = 0; i < filas.size(); i++) {

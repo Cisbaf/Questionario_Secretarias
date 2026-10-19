@@ -37,6 +37,11 @@ public class Bloco1Service {
     public Bloco1Response salvar(String publicId, Bloco1Request request) {
         Questionario questionario = questionarios.buscar(publicId);
         ControleDeVersao.exigirRascunho(questionario);
+        if (request.dataPreenchimento() != null
+                && request.dataPreenchimento().isAfter(java.time.LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo")))) {
+            throw new questionario.exception.DadosInvalidosException(
+                    java.util.Map.of("dataPreenchimento", "A data não pode ser futura"));
+        }
 
         Bloco1Identificacao bloco = repository.findByQuestionario(questionario).orElse(null);
         if (bloco == null) {

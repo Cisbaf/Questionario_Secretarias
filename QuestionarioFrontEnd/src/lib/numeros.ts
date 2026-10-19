@@ -24,11 +24,11 @@ export function paraNumero(texto: string, tipo: TipoNumero): number | null {
     if (!/^\d+$/.test(limpo)) return NaN;
     normalizado = limpo;
   } else if (tipo === "decimal") {
-    if (!/^\d+([.,]\d{1,2})?$/.test(limpo)) return NaN;
+    if (!/^\d+([.,]\d{0,2})?$/.test(limpo)) return NaN;
     normalizado = limpo.replace(",", ".");
   } else {
     // dinheiro: ponto só como separador de milhar, vírgula nos centavos
-    if (!/^(\d+|\d{1,3}(\.\d{3})+)(,\d{1,2})?$/.test(limpo)) return NaN;
+    if (!/^(\d+|\d{1,3}(\.\d{3})+)(,\d{0,2})?$/.test(limpo)) return NaN;
     normalizado = limpo.replace(/\./g, "").replace(",", ".");
   }
   const numero = Number(normalizado);
@@ -64,4 +64,18 @@ export function textoOuNulo(texto: string): string | null {
 /** Só os dígitos, limitado a {@code max} (SIGTAP 10, CNES 7). */
 export function soDigitos(texto: string, max: number): string {
   return texto.replace(/\D/g, "").slice(0, max);
+}
+
+/**
+ * Filtra o que a pessoa digita ou cola: letras e símbolos nem aparecem no campo.
+ * inteiro: só dígitos. decimal: dígitos e uma vírgula (o ponto vira vírgula), até 2 casas.
+ * dinheiro: dígitos, ponto de milhar e uma vírgula, até 2 casas.
+ */
+export function filtrarNumero(texto: string, tipo: TipoNumero): string {
+  if (tipo === "inteiro") return texto.replace(/\D/g, "").slice(0, 8);
+  let t = texto.replace(/[^\d.,]/g, "");
+  if (tipo === "decimal") t = t.replace(/\./g, ",");
+  const i = t.indexOf(",");
+  if (i >= 0) t = `${t.slice(0, i)},${t.slice(i + 1).replace(/[.,]/g, "").slice(0, 2)}`;
+  return t.slice(0, 20);
 }

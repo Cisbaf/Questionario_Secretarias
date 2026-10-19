@@ -65,9 +65,13 @@ class Blocos3a8ApiIntegrationTest {
     // ---------- corpos válidos e completos (tudo que o envio exige) ----------
 
     static final String B1 = "{\"municipio\":\"Nova Iguaçu\",\"secretario\":\"Maria Souza\",\"responsavel\":\"João Lima\","
-            + "\"email\":\"joao@exemplo.gov.br\",\"version\":null}";
+            + "\"cargoSetor\":\"Regulação\",\"email\":\"joao@exemplo.gov.br\",\"telefone\":\"21999990000\","
+            + "\"dataPreenchimento\":\"2026-03-20\",\"version\":null}";
 
-    static final String B2 = "{\"prioridades\":[{\"titulo\":\"UTI neonatal\",\"problema\":\"x\",\"resolveSozinho\":\"NAO\"}],"
+    static final String B2 = "{\"prioridades\":[{\"titulo\":\"UTI neonatal\",\"problema\":\"x\",\"resolveSozinho\":\"NAO\"},"
+            + "{\"titulo\":\"b\",\"problema\":\"x\",\"resolveSozinho\":\"SIM\"},{\"titulo\":\"c\",\"problema\":\"x\",\"resolveSozinho\":\"EM_PARTE\"},"
+            + "{\"titulo\":\"d\",\"problema\":\"x\",\"resolveSozinho\":\"NAO\"},{\"titulo\":\"e\",\"problema\":\"x\",\"resolveSozinho\":\"NAO\"}],"
+            + "\"gargalos\":\"Ressonância\",\"servicosParaVizinhos\":\"Policlínica\","
             + "\"grausLinhaCuidado\":{" + notasTodas() + "},"
             + "\"impedimentos\":[\"FALTA_PROFISSIONAIS\"],"
             + "\"ordemTemas\":{\"GOVERNANCA_PACTUACAO\":1,\"ORGANIZACAO_REDE\":2,\"FINANCIAMENTO\":3,"
@@ -84,22 +88,37 @@ class Blocos3a8ApiIntegrationTest {
     }
 
     static final String B3 = "{\"sistemas\":[\"SISREG\",\"PROPRIO\"],\"sistemaProprioNome\":\"Sistema da prefeitura\","
-            + "\"tipoFila\":\"UNICA\",\"classificacaoRisco\":\"SIM\",\"ultimaRevisao\":\"2026-09\",\"dataExtracao\":\"2026-11-05\","
+            + "\"tipoFila\":\"UNICA\",\"classificacaoRisco\":\"SIM\",\"ultimaRevisao\":\"2026-09\",\"dataExtracao\":\"2026-02-05\","
             + "\"filas\":[{\"especialidade\":\"Cardiologia\",\"sigtap\":\"0301010072\",\"totalAguardando\":100,"
             + "\"prioridadeAlta\":10,\"esperaMediaDias\":45.5,\"maiorEsperaDias\":200,\"aguardandoMais180\":20}],\"version\":null}";
 
+    /** Linhas fixas: a primeira preenchida, as demais marcadas "Não disponível" (a linha "Outro" é opcional). */
+    private static String linhasNaoDisponiveis(String campo, String... chaves) {
+        StringBuilder sb = new StringBuilder();
+        for (String chave : chaves) sb.append(",{\"").append(campo).append("\":\"").append(chave).append("\",\"naoDisponivel\":true}");
+        return sb.toString();
+    }
+
     static final String B4 = "{\"leitos\":[{\"tipo\":\"CLINICO_ADULTO\",\"solicitacoes\":50,\"atendidas\":30,\"canceladas\":10,"
-            + "\"tempoMedioHoras\":12.5,\"aguardando\":10}],\"centrais\":[\"MUNICIPAL\"],"
+            + "\"tempoMedioHoras\":12.5,\"aguardando\":10}"
+            + linhasNaoDisponiveis("tipo", "CIRURGICO_ADULTO", "ORTOPEDIA_TRAUMA", "UTI_ADULTO", "UTI_PEDIATRICA", "UTI_NEONATAL",
+                    "INTERMEDIARIA_SEMI", "PEDIATRICO", "OBSTETRICO", "PSIQUIATRICO", "CARDIOLOGIA_HEMODINAMICA", "NEUROLOGIA_AVC", "ONCOLOGIA")
+            + "],\"dataExtracaoLeitos\":\"2026-02-05\",\"centrais\":[\"MUNICIPAL\"],\"dataExtracaoEletivas\":\"2026-02-05\","
             + "\"eletivas\":[{\"especialidade\":\"Ortopedia\",\"totalAguardando\":30,\"esperaMediaDias\":90,\"maiorEsperaDias\":300,\"origem\":\"SER\"}],\"version\":null}";
 
     static final String B5 = "{\"unidades\":[{\"nome\":\"UPA Centro\",\"cnes\":\"1234567\",\"tipo\":\"UPA\",\"leitosObservacao\":10,"
-            + "\"pacientes24h\":8,\"pacientes72h\":3,\"ventilacaoMecanica\":1}],"
-            + "\"perfil\":[{\"necessidade\":\"LEITO_CLINICO\",\"pacientes\":5,\"diagnosticos\":\"I10, E11\"}],"
+            + "\"pacientes24h\":8,\"pacientes72h\":3,\"ventilacaoMecanica\":1}],\"dataExtracaoUnidades\":\"2026-02-05\","
+            + "\"perfil\":[{\"necessidade\":\"LEITO_CLINICO\",\"pacientes\":5,\"diagnosticos\":\"I10, E11\"}"
+            + linhasNaoDisponiveis("necessidade", "LEITO_CIRURGICO", "CIRURGIA_ORTOPEDICA_TRAUMA", "UTI_ADULTO", "UTI_LEITO_PEDIATRICO",
+                    "LEITO_PSIQUIATRICO", "HEMODINAMICA_CIRURGIA_CARDIACA", "NEURO_AVC", "HEMODIALISE", "EXAME_IMAGEM_DIAGNOSTICO",
+                    "AVALIACAO_ESPECIALISTA", "CUIDADOS_PROLONGADOS_PALIATIVOS") + "],"
             + "\"pacientesMais24h\":20,\"tempoMedioPermanenciaHoras\":30.5,\"obitosAguardandoVaga\":1,\"altaSemProcedimento\":2,"
             + "\"registroInformatizado\":\"PARCIAL\",\"motivos\":[\"FALTA_LEITO_NA_REGIAO\"],\"version\":null}";
 
     static final String B6 = "{\"situacoes\":[{\"situacao\":\"FRATURA_CIRURGICA\",\"pacientesAguardando\":7,\"esperaMediaDias\":40,"
-            + "\"ondeFeito\":\"Hospital da Posse\"}],\"version\":null}";
+            + "\"ondeFeito\":\"Hospital da Posse\"}"
+            + linhasNaoDisponiveis("situacao", "INFARTO_SCA", "AVC", "SUSPEITA_CANCER", "CANCER_CONFIRMADO", "DOENCA_RENAL_CRONICA",
+                    "GESTANTE_ALTO_RISCO", "PALIATIVO_AVANCADO") + "],\"version\":null}";
 
     static final String B7 = "{\"repasses\":[{\"unidade\":\"UPA Centro\",\"cnes\":\"1234567\",\"atoNumero\":\"Res. SES 123\","
             + "\"atoData\":\"2025-05-10\",\"valorMensal\":1234567.89,\"vigenciaAte\":\"2026-12-31\",\"repasseEmDia\":\"SIM\"}],"
@@ -108,7 +127,7 @@ class Blocos3a8ApiIntegrationTest {
             + "\"aparelhosNaoDisponivel\":true,\"version\":null}";
 
     static final String B8 = "{\"observacoes\":\"Nada a acrescentar\",\"documentos\":[\"PLANO_MUNICIPAL_PAS\"],"
-            + "\"assinaturaNome\":\"Maria Souza\",\"assinaturaData\":\"2026-11-20\",\"declaracao\":true,\"version\":null}";
+            + "\"assinaturaNome\":\"Maria Souza\",\"assinaturaData\":\"2026-03-20\",\"declaracao\":true,\"version\":null}";
 
     private void preencherTudo(String id) throws Exception {
         enviarBloco(id, 1, B1).andExpect(status().isOk());
@@ -233,7 +252,7 @@ class Blocos3a8ApiIntegrationTest {
         enviarBloco(id, 4, "{\"leitos\":[{\"tipo\":\"UTI_ADULTO\",\"solicitacoes\":50,\"atendidas\":30,\"canceladas\":5,"
                 + "\"tempoMedioHoras\":12.5,\"aguardando\":15},{\"tipo\":\"OUTRO\",\"solicitacoes\":2}],"
                 + "\"leitoOutroDescricao\":\"Queimados\",\"centrais\":[\"CRUR_SAMU\",\"OUTRA\"],\"centralOutra\":\"Central X\","
-                + "\"dataExtracaoLeitos\":\"2026-11-05\",\"version\":null}")
+                + "\"dataExtracaoLeitos\":\"2026-02-05\",\"version\":null}")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.leitos.length()").value(14))
                 .andExpect(jsonPath("$.leitos[0].tipo").value("CLINICO_ADULTO"))
@@ -244,7 +263,7 @@ class Blocos3a8ApiIntegrationTest {
                 .andExpect(jsonPath("$.leitos[13].solicitacoes").value(2))
                 .andExpect(jsonPath("$.leitoOutroDescricao").value("Queimados"))
                 .andExpect(jsonPath("$.centralOutra").value("Central X"))
-                .andExpect(jsonPath("$.dataExtracaoLeitos").value("2026-11-05"));
+                .andExpect(jsonPath("$.dataExtracaoLeitos").value("2026-02-05"));
     }
 
     @Test
@@ -373,7 +392,7 @@ class Blocos3a8ApiIntegrationTest {
         enviarBloco(id, 8, B8).andExpect(status().isOk())
                 .andExpect(jsonPath("$.observacoes").value("Nada a acrescentar"))
                 .andExpect(jsonPath("$.documentos[0]").value("PLANO_MUNICIPAL_PAS"))
-                .andExpect(jsonPath("$.assinaturaData").value("2026-11-20"))
+                .andExpect(jsonPath("$.assinaturaData").value("2026-03-20"))
                 .andExpect(jsonPath("$.declaracao").value(true));
         enviarBloco(id, 8, "{\"observacoes\":\"" + "x".repeat(5001) + "\",\"version\":0}")
                 .andExpect(status().isBadRequest())
@@ -444,7 +463,7 @@ class Blocos3a8ApiIntegrationTest {
         enviarBloco(id, 4, B4.replace("\"atendidas\":30,\"canceladas\":10", "\"atendidas\":45,\"canceladas\":10")
                 .replace("\"version\":null", "\"version\":0")).andExpect(status().isOk());
         enviarBloco(id, 7, B7.replace("\"aparelhosNaoDisponivel\":true",
-                "\"aparelhos\":[{\"estabelecimento\":\"X\",\"aparelho\":\"TOMOGRAFO\",\"quantidadeCnes\":1,\"emUsoDeFato\":2}]")
+                "\"aparelhos\":[{\"estabelecimento\":\"X\",\"cnes\":\"1234567\",\"aparelho\":\"TOMOGRAFO\",\"quantidadeCnes\":1,\"emUsoDeFato\":2,\"atendeSus\":\"SIM\"}]")
                 .replace("\"version\":null", "\"version\":0")).andExpect(status().isOk());
 
         mvc.perform(get("/api/questionarios/" + id + "/pendencias"))
@@ -468,7 +487,7 @@ class Blocos3a8ApiIntegrationTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("ENVIO_INCOMPLETO"))
                 .andExpect(jsonPath("$.message").exists())
-                .andExpect(jsonPath("$.fields['bloco2.prioridades']").exists())
+                .andExpect(jsonPath("$.fields['bloco2.prioridades[0].titulo']").exists())
                 .andExpect(jsonPath("$.fields['bloco3.sistemas']").exists())
                 .andExpect(jsonPath("$.fields['bloco8.declaracao']").exists())
                 .andExpect(jsonPath("$.fields['bloco1.municipio']").doesNotExist());
@@ -497,10 +516,77 @@ class Blocos3a8ApiIntegrationTest {
     }
 
     @Test
+    @DisplayName("Todo campo é obrigatório, menos \"Outro\", SIGTAP e observações: o que falta vira pendência no campo certo")
+    void todoCampoEObrigatorio() throws Exception {
+        String id = iniciar();
+        preencherTudo(id);
+        // 1: sem telefone e sem data; 3.3: linha sem "aguardando há mais de 180 dias"; 4.1: sem data de extração;
+        // 5.1: unidade sem CNES; 6: linha preenchida pela metade; 8: sem observações
+        enviarBloco(id, 1, B1.replace("\"telefone\":\"21999990000\",", "").replace("\"dataPreenchimento\":\"2026-03-20\",", "")
+                .replace("\"version\":null", "\"version\":0")).andExpect(status().isOk());
+        enviarBloco(id, 3, B3.replace(",\"aguardandoMais180\":20", "").replace("\"version\":null", "\"version\":0")).andExpect(status().isOk());
+        enviarBloco(id, 4, B4.replace("\"dataExtracaoLeitos\":\"2026-02-05\",", "").replace("\"version\":null", "\"version\":0")).andExpect(status().isOk());
+        enviarBloco(id, 5, B5.replace("\"cnes\":\"1234567\",", "").replace("\"version\":null", "\"version\":0")).andExpect(status().isOk());
+        enviarBloco(id, 6, B6.replace(",\"esperaMediaDias\":40", "").replace("\"version\":null", "\"version\":0")).andExpect(status().isOk());
+        enviarBloco(id, 8, B8.replace("\"observacoes\":\"Nada a acrescentar\",", "").replace("\"version\":null", "\"version\":0")).andExpect(status().isOk());
+
+        mvc.perform(get("/api/questionarios/" + id + "/pendencias")).andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.campo=='telefone')]").isNotEmpty())
+                .andExpect(jsonPath("$[?(@.campo=='dataPreenchimento')]").isNotEmpty())
+                .andExpect(jsonPath("$[?(@.campo=='filas[0].aguardandoMais180')]").isNotEmpty())
+                .andExpect(jsonPath("$[?(@.campo=='dataExtracaoLeitos')]").isNotEmpty())
+                .andExpect(jsonPath("$[?(@.campo=='unidades[0].cnes')]").isNotEmpty())
+                .andExpect(jsonPath("$[?(@.campo=='situacoes[0].esperaMediaDias')]").isNotEmpty())
+                .andExpect(jsonPath("$[?(@.campo=='observacoes')]").isNotEmpty())
+                .andExpect(jsonPath("$.length()").value(7));
+    }
+
+    @Test
+    @DisplayName("Linha fixa vazia pede preenchimento ou \"Não disponível\"; sem pacientes não se exige diagnóstico; \"Outro\" é opcional")
+    void linhasFixas() throws Exception {
+        String id = iniciar();
+        preencherTudo(id);
+        enviarBloco(id, 5, B5.replace("\"pacientes\":5,\"diagnosticos\":\"I10, E11\"", "\"pacientes\":0")
+                .replace("\"version\":null", "\"version\":0")).andExpect(status().isOk());
+        mvc.perform(get("/api/questionarios/" + id + "/pendencias")).andExpect(jsonPath("$.length()").value(0));
+        // Uma linha comum deixada em branco (nem dado, nem "Não disponível") é uma pendência só.
+        enviarBloco(id, 6, B6.replace("{\"situacao\":\"AVC\",\"naoDisponivel\":true}", "{\"situacao\":\"AVC\"}")
+                .replace("\"version\":null", "\"version\":0")).andExpect(status().isOk());
+        mvc.perform(get("/api/questionarios/" + id + "/pendencias"))
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].bloco").value(6))
+                .andExpect(jsonPath("$[0].tipo").value("OBRIGATORIO"));
+    }
+
+    @Test
     @DisplayName("Revisão, pendências e envio com link inexistente: 404")
     void linkInvalidoNaRevisaoEEnvio() throws Exception {
         mvc.perform(get("/api/questionarios/abc/respostas")).andExpect(status().isNotFound());
         mvc.perform(get("/api/questionarios/abc/pendencias")).andExpect(status().isNotFound());
         mvc.perform(post("/api/questionarios/abc/enviar")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Data futura é recusada (400 com o campo); vigência futura continua aceita")
+    void dataFuturaRecusada() throws Exception {
+        String id = iniciar();
+        String amanha = java.time.LocalDate.now(java.time.ZoneId.of("America/Sao_Paulo")).plusDays(1).toString();
+        String mesQueVem = java.time.YearMonth.now(java.time.ZoneId.of("America/Sao_Paulo")).plusMonths(1).toString();
+        enviarBloco(id, 3, com("\"dataExtracao\":\"" + amanha + "\",\"ultimaRevisao\":\"" + mesQueVem + "\"", null))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fields.dataExtracao").value("A data não pode ser futura"))
+                .andExpect(jsonPath("$.fields.ultimaRevisao").value("O mês não pode ser futuro"));
+        enviarBloco(id, 4, com("\"dataExtracaoLeitos\":\"" + amanha + "\"", null))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fields.dataExtracaoLeitos").exists());
+        enviarBloco(id, 5, com("\"dataExtracaoUnidades\":\"" + amanha + "\"", null))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fields.dataExtracaoUnidades").exists());
+        enviarBloco(id, 8, com("\"assinaturaData\":\"" + amanha + "\"", null))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fields.assinaturaData").exists());
+        enviarBloco(id, 7, com("\"repasses\":[{\"atoData\":\"" + amanha + "\"}]", null))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fields['repasses[0].atoData']").exists());
+        enviarBloco(id, 1, com("\"dataPreenchimento\":\"" + amanha + "\"", null))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fields.dataPreenchimento").exists());
+        enviarBloco(id, 7, com("\"repasses\":[{\"vigenciaAte\":\"" + amanha + "\"}]", null))
+                .andExpect(status().isOk());
     }
 }

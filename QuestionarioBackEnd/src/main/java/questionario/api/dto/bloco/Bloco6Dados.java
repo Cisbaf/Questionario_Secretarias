@@ -76,18 +76,26 @@ public record Bloco6Dados(
     @Override
     public List<Pendencia> pendencias() {
         List<Pendencia> lista = new ArrayList<>();
-        boolean tem = situacoes != null && situacoes.stream().anyMatch(s -> s != null && (s.preenchida() || Boolean.TRUE.equals(s.naoDisponivel())));
-        if (!tem && !Boolean.TRUE.equals(tabelaNaoDisponivel)) {
-            lista.add(Pendencia.obrigatorio(6, "situacoes", "Bloco 6: preencha ao menos uma situação ou marque \"Não disponível\""));
-        }
-        if (situacoes != null) {
+        if (!Boolean.TRUE.equals(tabelaNaoDisponivel) && situacoes != null) {
             for (int i = 0; i < situacoes.size(); i++) {
                 Seguimento s = situacoes.get(i);
-                if (s != null && s.situacao() == SituacaoClinica.OUTRO && s.preenchida()
-                        && (Normaliza.vazio(s.situacaoOutra()) || Normaliza.vazio(s.procedimentoOutro()))) {
-                    lista.add(Pendencia.obrigatorio(6, "situacoes[" + i + "].situacaoOutra",
-                            "Bloco 6, \"Outro\": descreva a situação clínica e o procedimento"));
+                if (s == null || s.situacao() == null || Boolean.TRUE.equals(s.naoDisponivel())) continue;
+                boolean outro = s.situacao() == SituacaoClinica.OUTRO;
+                // A linha "Outro" é opcional; começou a preencher, tem que completar.
+                if (outro && !s.preenchida() && Normaliza.vazio(s.situacaoOutra()) && Normaliza.vazio(s.procedimentoOutro())) continue;
+                String p = "situacoes[" + i + "].";
+                String r = outro ? "Bloco 6, \"Outro\": " : "Bloco 6, linha " + (i + 1) + ": ";
+                if (!outro && !s.preenchida()) {
+                    lista.add(Pendencia.obrigatorio(6, p + "pacientesAguardando", r + "preencha a linha ou marque \"Não disponível\""));
+                    continue;
                 }
+                if (outro) {
+                    Normaliza.exigir(lista, 6, p + "situacaoOutra", r + "descreva a situação clínica", s.situacaoOutra());
+                    Normaliza.exigir(lista, 6, p + "procedimentoOutro", r + "descreva o procedimento de seguimento", s.procedimentoOutro());
+                }
+                Normaliza.exigir(lista, 6, p + "pacientesAguardando", r + "informe os pacientes aguardando (ou marque \"Não disponível\" na linha)", s.pacientesAguardando());
+                Normaliza.exigir(lista, 6, p + "esperaMediaDias", r + "informe a espera média", s.esperaMediaDias());
+                Normaliza.exigir(lista, 6, p + "ondeFeito", r + "informe onde o procedimento é feito hoje", s.ondeFeito());
             }
         }
         return lista;

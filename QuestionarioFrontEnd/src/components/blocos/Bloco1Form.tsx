@@ -5,6 +5,7 @@ import { useQuestionario } from "@/components/QuestionarioContext";
 import { useBlocoQuestionario } from "@/hooks/useBlocoQuestionario";
 import type { Bloco1Servidor } from "@/types";
 import { Autocomplete, Box, TextField } from "@mui/material";
+import { erroDeData, hojeIso } from "@/lib/datas";
 import { z } from "zod";
 
 /** Campos do Bloco 1 como o formulário os edita: tudo texto, vazio = não preenchido. */
@@ -24,6 +25,10 @@ const MUNICIPIOS_SUGERIDOS = [
   "Nilópolis", "Nova Iguaçu", "Paracambi", "Queimados", "São João de Meriti", "Seropédica",
 ];
 
+const LIMITES: Record<keyof Bloco1Valores, number | undefined> = {
+  municipio: 150, secretario: 150, responsavel: 150, cargoSetor: 150, email: 150, telefone: 30, dataPreenchimento: undefined,
+};
+
 const maximo = (n: number) => `Máximo de ${n} caracteres`;
 const texto150 = z.string().max(150, maximo(150));
 
@@ -37,7 +42,10 @@ const esquema = z.object({
     .refine((v) => v.trim() === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()), "E-mail inválido"),
   telefone: z.string().max(30, maximo(30))
     .regex(/^[0-9 ()+-]*$/, "Use apenas números, espaços, parênteses, + e -"),
-  dataPreenchimento: z.string().refine((v) => v === "" || /^\d{4}-\d{2}-\d{2}$/.test(v), "Data inválida"),
+  dataPreenchimento: z.string().superRefine((v, ctx) => {
+    const erro = erroDeData(v);
+    if (erro) ctx.addIssue({ code: "custom", message: erro });
+  }),
 });
 
 export function validarBloco1(valores: Bloco1Valores): Record<string, string> {
@@ -91,6 +99,7 @@ export default function Bloco1Form() {
     onChange: (evento: { target: { value: string } }) => alterar((atual) => ({ ...atual, [nome]: evento.target.value })),
     error: Boolean(errosCampos[nome]),
     fullWidth: true,
+    slotProps: { htmlInput: { maxLength: LIMITES[nome] } },
   });
 
   return (
@@ -105,6 +114,11 @@ export default function Bloco1Form() {
             <TextField
               {...parametros}
               label="Município"
+              slotProps={{
+                input: parametros.InputProps,
+                htmlInput: { ...parametros.inputProps, maxLength: 150 },
+                inputLabel: parametros.InputLabelProps,
+              }}
               error={Boolean(errosCampos.municipio)}
               helperText={errosCampos.municipio ?? "Escolha na lista ou escreva o nome por extenso (ex.: Nova Iguaçu)."}
             />
@@ -124,20 +138,21 @@ export default function Bloco1Form() {
         <TextField
           label="E-mail"
           {...campo("email")}
-          slotProps={{ htmlInput: { inputMode: "email", autoComplete: "email" } }}
+          slotProps={{ htmlInput: { maxLength: 150, inputMode: "email", autoComplete: "email" } }}
           helperText={errosCampos.email}
         />
         <TextField
           label="Telefone / WhatsApp"
           {...campo("telefone")}
-          slotProps={{ htmlInput: { inputMode: "tel", autoComplete: "tel" } }}
+          onChange={(e) => alterar((atual) => ({ ...atual, telefone: e.target.value.replace(/[^0-9 ()+-]/g, "") }))}
+          slotProps={{ htmlInput: { maxLength: 30, inputMode: "tel", autoComplete: "tel" } }}
           helperText={errosCampos.telefone ?? "Com DDD."}
         />
         <TextField
           label="Data do preenchimento"
           type="date"
           {...campo("dataPreenchimento")}
-          slotProps={{ inputLabel: { shrink: true } }}
+          slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: hojeIso() } }}
           helperText={errosCampos.dataPreenchimento}
         />
       </Box>

@@ -153,10 +153,11 @@ export function paraServidorBloco2(v: Bloco2Valores, version: number | null) {
 
 // ---------- formulário ----------
 
-function Secao({ id, titulo, ajuda, children }: { id: string; titulo: string; ajuda?: string; children: React.ReactNode }) {
+function Secao({ id, titulo, ajuda, nota, children }: { id: string; titulo: string; ajuda?: string; nota?: string; children: React.ReactNode }) {
   return (
     <Box component="section" aria-labelledby={id} sx={{ mb: 5 }}>
       <Typography id={id} variant="h6" component="h3" sx={{ mb: 0.5 }}>{titulo}</Typography>
+      {nota && <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontStyle: "italic" }}>{nota}</Typography>}
       {ajuda && <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{ajuda}</Typography>}
       {children}
     </Box>
@@ -212,6 +213,7 @@ export default function Bloco2Form() {
       onChange={(e) => alterar((atual) => ({ ...atual, [nome]: e.target.value }))}
       error={Boolean(errosCampos[nome])}
       helperText={errosCampos[nome] ?? `${(valores?.[nome] ?? "").length} / 5000`}
+ slotProps={{ htmlInput: { maxLength: 5000 } }}
     />
   );
 
@@ -243,6 +245,7 @@ export default function Bloco2Form() {
                         onChange={(e) => mudarPrioridade(i, { titulo: e.target.value })}
                         error={Boolean(errosCampos[`prioridades[${i}].titulo`])}
                         helperText={errosCampos[`prioridades[${i}].titulo`]}
+ slotProps={{ htmlInput: { maxLength: 300 } }}
                         multiline
                         minRows={2}
                         fullWidth
@@ -253,6 +256,7 @@ export default function Bloco2Form() {
                         onChange={(e) => mudarPrioridade(i, { problema: e.target.value })}
                         error={Boolean(errosCampos[`prioridades[${i}].problema`])}
                         helperText={errosCampos[`prioridades[${i}].problema`]}
+ slotProps={{ htmlInput: { maxLength: 500 } }}
                         multiline
                         minRows={2}
                         fullWidth
@@ -287,6 +291,7 @@ export default function Bloco2Form() {
                 );
               })}
             </Stack>
+            {errosCampos.prioridades && <FormHelperText error sx={{ mt: 1 }}>{errosCampos.prioridades}</FormHelperText>}
           </Secao>
 
           <Divider sx={{ mb: 5 }} />
@@ -324,6 +329,7 @@ export default function Bloco2Form() {
                         onChange={(e) => alterar((atual) => ({ ...atual, linhaOutraDescricao: e.target.value }))}
                         error={Boolean(errosCampos.linhaOutraDescricao)}
                         helperText={errosCampos.linhaOutraDescricao}
+ slotProps={{ htmlInput: { maxLength: 150 } }}
                       />
                     ) : (
                       <Box>
@@ -373,6 +379,7 @@ export default function Bloco2Form() {
             {Object.keys(errosCampos).filter((k) => k.startsWith("grausLinhaCuidado.")).map((k) => (
               <FormHelperText key={k} error>{k.replace("grausLinhaCuidado.", "")}: {errosCampos[k]}</FormHelperText>
             ))}
+            {errosCampos.grausLinhaCuidado && <FormHelperText error sx={{ mt: 1 }}>{errosCampos.grausLinhaCuidado}</FormHelperText>}
           </Secao>
 
           <Divider sx={{ mb: 5 }} />
@@ -423,6 +430,7 @@ export default function Bloco2Form() {
                 onChange={(e) => alterar((atual) => ({ ...atual, impedimentoOutro: e.target.value }))}
                 error={Boolean(errosCampos.impedimentoOutro)}
                 helperText={errosCampos.impedimentoOutro}
+ slotProps={{ htmlInput: { maxLength: 150 } }}
               />
             )}
           </Secao>

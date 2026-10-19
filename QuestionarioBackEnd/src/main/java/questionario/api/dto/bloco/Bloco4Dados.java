@@ -13,7 +13,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /** Bloco 4 do documento: regulação hospitalar (itens 4.1 e 4.2). */
@@ -113,23 +115,66 @@ public record Bloco4Dados(
     @Override
     public void validarRegras() {
         Normaliza.semRepetidas(leitos, LinhaLeito::tipo, "leitos");
+        Map<String, String> erros = new LinkedHashMap<>();
+        Normaliza.naoFutura(erros, "dataExtracaoLeitos", dataExtracaoLeitos);
+        Normaliza.naoFutura(erros, "dataExtracaoEletivas", dataExtracaoEletivas);
+        Normaliza.lancarSeHouver(erros);
     }
 
     @Override
     public List<Pendencia> pendencias() {
         List<Pendencia> lista = new ArrayList<>();
-        boolean temLeito = leitos != null && leitos.stream().anyMatch(l -> l != null && (l.preenchida() || Boolean.TRUE.equals(l.naoDisponivel())));
-        if (!temLeito && !Boolean.TRUE.equals(leitosNaoDisponivel)) {
-            lista.add(Pendencia.obrigatorio(4, "leitos", "4.1: preencha ao menos um tipo de leito ou marque \"Não disponível\""));
+        boolean semLeitos = Boolean.TRUE.equals(leitosNaoDisponivel);
+        if (!semLeitos) {
+            Normaliza.exigir(lista, 4, "dataExtracaoLeitos", "4.1: informe a data de extração dos dados", dataExtracaoLeitos);
+            if (leitos != null) {
+                for (int i = 0; i < leitos.size(); i++) {
+                    LinhaLeito l = leitos.get(i);
+                    if (l == null || l.tipo() == null || Boolean.TRUE.equals(l.naoDisponivel())) continue;
+                    boolean outro = l.tipo() == TipoLeito.OUTRO;
+                    // A linha "Outro" é opcional; começou a preencher, tem que completar.
+                    if (outro && !l.preenchida() && Normaliza.vazio(leitoOutroDescricao)) continue;
+                    String p = "leitos[" + i + "].";
+                    String r = "4.1, " + (outro ? "linha \"Outro\"" : "linha " + (i + 1)) + ": ";
+                    if (!outro && !l.preenchida()) {
+                        lista.add(Pendencia.obrigatorio(4, p + "solicitacoes", r + "preencha a linha ou marque \"Não disponível\""));
+                        continue;
+                    }
+                    if (outro) Normaliza.exigir(lista, 4, "leitoOutroDescricao", r + "descreva o tipo de leito", leitoOutroDescricao);
+                    Normaliza.exigir(lista, 4, p + "solicitacoes", r + "informe as solicitações no período (ou marque \"Não disponível\" na linha)", l.solicitacoes());
+                    Normaliza.exigir(lista, 4, p + "atendidas", r + "informe as atendidas", l.atendidas());
+                    Normaliza.exigir(lista, 4, p + "canceladas", r + "informe as canceladas ou óbitos antes da vaga", l.canceladas());
+                    Normaliza.exigir(lista, 4, p + "tempoMedioHoras", r + "informe o tempo médio até a vaga", l.tempoMedioHoras());
+                    Normaliza.exigir(lista, 4, p + "aguardando", r + "informe quantos aguardam na data da extração", l.aguardando());
+                }
+            }
         }
         if (centrais == null || centrais.isEmpty()) {
             lista.add(Pendencia.obrigatorio(4, "centrais", "4.1: marque a central que recebe os pedidos"));
         } else if (centrais.contains(CentralRegulacao.OUTRA) && Normaliza.vazio(centralOutra)) {
             lista.add(Pendencia.obrigatorio(4, "centralOutra", "4.1: descreva a outra central"));
         }
+        boolean semEletivas = Boolean.TRUE.equals(eletivasNaoDisponivel);
         boolean temEletiva = eletivas != null && eletivas.stream().anyMatch(e -> e != null && e.preenchida());
-        if (!temEletiva && !Boolean.TRUE.equals(eletivasNaoDisponivel)) {
+        if (!temEletiva && !semEletivas) {
             lista.add(Pendencia.obrigatorio(4, "eletivas", "4.2: preencha ao menos uma linha ou marque \"Não disponível\""));
+        }
+        if (!semEletivas) {
+            Normaliza.exigir(lista, 4, "dataExtracaoEletivas", "4.2: informe a data de extração dos dados", dataExtracaoEletivas);
+            if (eletivas != null) {
+                for (int i = 0; i < eletivas.size(); i++) {
+                    Eletiva e = eletivas.get(i);
+                    if (e == null || !e.preenchida()) continue;
+                    String p = "eletivas[" + i + "].";
+                    String r = "4.2, linha " + (i + 1) + ": ";
+                    Normaliza.exigir(lista, 4, p + "especialidade", r + "informe a especialidade ou o procedimento", e.especialidade());
+                    // O código SIGTAP é opcional ("se houver").
+                    Normaliza.exigir(lista, 4, p + "totalAguardando", r + "informe o total aguardando", e.totalAguardando());
+                    Normaliza.exigir(lista, 4, p + "esperaMediaDias", r + "informe a espera média", e.esperaMediaDias());
+                    Normaliza.exigir(lista, 4, p + "maiorEsperaDias", r + "informe a maior espera", e.maiorEsperaDias());
+                    Normaliza.exigir(lista, 4, p + "origem", r + "informe a origem do dado", e.origem());
+                }
+            }
         }
         if (leitos != null) {
             for (int i = 0; i < leitos.size(); i++) {

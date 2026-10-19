@@ -5,6 +5,7 @@ import { Marcaveis, NaoDisponivel, Secao, TabelaDinamica, TabelaFixa, Texto } fr
 import { useQuestionario } from "@/components/QuestionarioContext";
 import { useBlocoQuestionario } from "@/hooks/useBlocoQuestionario";
 import { CENTRAIS_REGULACAO, ORIGENS_DADO, TIPOS_LEITO, type CentralRegulacao } from "@/lib/rotulos";
+import { erroDeData } from "@/lib/datas";
 import { textoOuNulo } from "@/lib/numeros";
 import {
   dinamicasDeServidor, dinamicasParaServidor, fixasDeServidor, fixasParaServidor, marcarNaoDisp, num,
@@ -17,19 +18,19 @@ const CHAVES_LEITO = TIPOS_LEITO.map((t) => t.valor);
 
 export const LEITO_SPEC: CampoSpec[] = [
   { nome: "solicitacoes", rotulo: "Solicitações no período", tipo: "inteiro" },
-  { nome: "atendidas", rotulo: "Atendidas", tipo: "inteiro" },
-  { nome: "canceladas", rotulo: "Canceladas", tipo: "inteiro" },
+  { nome: "atendidas", rotulo: "Atendidas (vaga concedida)", tipo: "inteiro" },
+  { nome: "canceladas", rotulo: "Canceladas ou óbito antes da vaga", tipo: "inteiro" },
   { nome: "tempoMedioHoras", rotulo: "Tempo médio até a vaga (horas)", tipo: "decimal" },
-  { nome: "aguardando", rotulo: "Aguardando agora", tipo: "inteiro" },
+  { nome: "aguardando", rotulo: "Aguardando na data da extração", tipo: "inteiro" },
 ];
 
 export const ELETIVA_SPEC: CampoSpec[] = [
-  { nome: "especialidade", rotulo: "Especialidade ou procedimento", tipo: "texto", max: 200, largo: true },
+  { nome: "especialidade", rotulo: "Especialidade / procedimento", tipo: "texto", max: 200, largo: true },
   { nome: "sigtap", rotulo: "Código SIGTAP (10 números)", tipo: "sigtap" },
   { nome: "totalAguardando", rotulo: "Total aguardando", tipo: "inteiro" },
   { nome: "esperaMediaDias", rotulo: "Espera média (dias)", tipo: "decimal" },
   { nome: "maiorEsperaDias", rotulo: "Maior espera (dias)", tipo: "inteiro" },
-  { nome: "origem", rotulo: "De onde vem o número", tipo: "opcao", opcoes: ORIGENS_DADO },
+  { nome: "origem", rotulo: "Origem do dado", tipo: "opcao", opcoes: ORIGENS_DADO },
   { nome: "origemOutro", rotulo: "Qual é a origem?", tipo: "texto", max: 150, soSe: { campo: "origem", valor: "OUTRO" } },
 ];
 
@@ -80,6 +81,8 @@ export function validarBloco4(v: Bloco4Valores): Record<string, string> {
   const erros: Record<string, string> = {};
   if (v.leitoOutroDescricao.trim().length > 150) erros.leitoOutroDescricao = "Máximo de 150 caracteres";
   if (v.centralOutra.trim().length > 150) erros.centralOutra = "Máximo de 150 caracteres";
+  const d1 = erroDeData(v.dataExtracaoLeitos); if (d1) erros.dataExtracaoLeitos = d1;
+  const d2 = erroDeData(v.dataExtracaoEletivas); if (d2) erros.dataExtracaoEletivas = d2;
   if (!v.leitosNaoDisponivel) {
     Object.assign(erros, validarLinhas(LEITO_SPEC, v.leitos.linhas.map((l, i) => (v.leitos.naoDisp[i] ? Object.fromEntries(Object.keys(l).map((k) => [k, ""])) : l)), "leitos"));
   }
@@ -123,7 +126,8 @@ export default function Bloco4Form() {
     <BlocoLayout numero={4} motor={motor}>
       {v && (
         <>
-          <Secao id="b4-leitos" titulo="4.1 Pedidos de leito hospitalar"
+          <Secao id="b4-leitos" titulo="4.1 Solicitações de internação de urgência no período de referência, por tipo de leito"
+            nota="Pedidos feitos pelas UPAs, prontos-socorros e hospitais do município à central de regulação (municipal, estadual ou regional)."
             ajuda="Por tipo de leito, no período dos números extraídos. Se não tem o dado de um tipo, marque “Não disponível” nele.">
             <Texto rotulo="Data em que os números foram extraídos" tipo="date" valor={v.dataExtracaoLeitos}
               onChange={(t) => set({ dataExtracaoLeitos: t })} erro={e.dataExtracaoLeitos} />
@@ -143,7 +147,7 @@ export default function Bloco4Form() {
             />
           </Secao>
 
-          <Secao id="b4-centrais" titulo="4.1 Central que recebe os pedidos">
+          <Secao id="b4-centrais" titulo="Central(is) que recebe(m) os pedidos">
             <Marcaveis rotulo="Os pedidos de leito vão para…" opcoes={CENTRAIS_REGULACAO} valor={v.centrais}
               onChange={(c) => set({ centrais: c })} erro={e.centrais} />
             {v.centrais.includes("OUTRA") && (
@@ -152,7 +156,8 @@ export default function Bloco4Form() {
             )}
           </Secao>
 
-          <Secao id="b4-eletivas" titulo="4.2 Cirurgias e procedimentos eletivos hospitalares"
+          <Secao id="b4-eletivas" titulo="4.2 Fila de cirurgias eletivas e procedimentos hospitalares programados"
+            nota="Inclua o que está no Opera Fácil, no SER, no SISREG e em controles próprios. Indique a origem do dado."
             ajuda={`Até ${MAX_ELETIVAS} linhas, as de maior fila.`}>
             <Texto rotulo="Data em que os números foram extraídos" tipo="date" valor={v.dataExtracaoEletivas}
               onChange={(t) => set({ dataExtracaoEletivas: t })} erro={e.dataExtracaoEletivas} />
