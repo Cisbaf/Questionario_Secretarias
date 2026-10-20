@@ -3,3 +3,8 @@ node_modules
 .idea
 npm-debug.log
 .env
+.env.*
+!.env.example
+*.tsbuildinfo
+Dockerfile
+.dockerignore
