@@ -18,10 +18,13 @@ const data = (d: string | null) => formatarData(d) ?? "não informada";
 /** Resumo curto de cada bloco para a tela de revisão: o que foi respondido, sem repetir cada número. */
 export function resumirRespostas(r: Respostas): ResumoBloco[] {
   const b1 = r.bloco1, b2 = r.bloco2, b3 = r.bloco3, b4 = r.bloco4, b5 = r.bloco5, b6 = r.bloco6, b7 = r.bloco7, b8 = r.bloco8;
+  const docs82 = (r.anexos ?? []).filter((a) => a.documento !== "PLANILHA_COLETA");
+  const planilha = (r.anexos ?? []).find((a) => a.documento === "PLANILHA_COLETA");
   const dados: string[][] = [
     [
       `Município: ${b1.municipio ?? "não informado"}`,
       `Responsável: ${b1.responsavel ?? "não informado"}`,
+      `Planilha de coleta preenchida: ${planilha ? planilha.nome : "não enviada"}`,
     ],
     [
       `Prioridades preenchidas: ${(b2.prioridades ?? []).filter((p) => p.titulo || p.problema).length} de 5`,
@@ -54,7 +57,8 @@ export function resumirRespostas(r: Respostas): ResumoBloco[] {
     ],
     [
       `Observações: ${b8.observacoes ? "preenchidas" : "nenhuma"}`,
-      `Documentos a enviar depois: ${lista((b8.documentos ?? []).map((d) => rotuloDe(DOCUMENTOS_ANEXAVEIS, d)))}`,
+      `Documentos marcados: ${lista((b8.documentos ?? []).map((d) => rotuloDe(DOCUMENTOS_ANEXAVEIS, d)))}`,
+      `Arquivos anexados: ${docs82.length === 0 ? "nenhum" : `${docs82.length} (${docs82.map((a) => a.nome).join("; ")})`}`,
       `Assinatura: ${b8.assinaturaNome ?? "não informada"}, ${data(b8.assinaturaData)}; declaração ${b8.declaracao ? "marcada" : "não marcada"}`,
     ],
   ];

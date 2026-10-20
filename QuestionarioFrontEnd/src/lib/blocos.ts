@@ -2,7 +2,7 @@
 export type InfoBloco = { numero: number; titulo: string; descricao: string; nota?: string; introducao?: string[]; etapa: string; pronto: boolean };
 
 export const BLOCOS: InfoBloco[] = [
-  { numero: 1, titulo: "Identificação", descricao: "Identifique o município e a equipe responsável pelo preenchimento.", etapa: "E03", pronto: true },
+  { numero: 1, titulo: "Identificação", descricao: "Identifique o município e a equipe responsável pelo preenchimento, e envie a planilha de coleta preenchida.", etapa: "E03", pronto: true },
   { numero: 2, titulo: "Prioridades de atenção à saúde", descricao: "Conte quais são as maiores prioridades de saúde do município e o que trava a solução de cada uma.", nota: "Resposta do(a) secretário(a).", etapa: "E04", pronto: true },
   { numero: 3, titulo: "Fila da regulação ambulatorial", descricao: "Informe as filas de consultas e exames especializados que passam pela regulação.", etapa: "E05", pronto: true },
   { numero: 4, titulo: "Regulação hospitalar", descricao: "Informe os pedidos de leito hospitalar e as cirurgias e procedimentos eletivos que aguardam vaga.", etapa: "E06", pronto: true },

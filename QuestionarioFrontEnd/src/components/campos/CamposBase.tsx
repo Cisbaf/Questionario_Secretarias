@@ -40,9 +40,11 @@ export function Escolha({ rotulo, opcoes, valor, onChange, erro, desabilitado }:
 }
 
 /** Várias opções marcáveis, mantidas na ordem do documento. */
-export function Marcaveis<T extends string>({ rotulo, opcoes, valor, onChange, erro, desabilitado }: {
+export function Marcaveis<T extends string>({ rotulo, opcoes, valor, onChange, erro, desabilitado, travadas }: {
   rotulo: string; opcoes: readonly { valor: T; rotulo: string }[]; valor: T[]; onChange: (v: T[]) => void;
   erro?: string; desabilitado?: boolean;
+  /** Opções marcadas que não podem ser desmarcadas (ex.: já têm arquivo anexado). */
+  travadas?: readonly T[];
 }) {
   return (
     <FormControl error={!!erro} disabled={desabilitado} sx={{ mb: 2, display: "block" }}>
@@ -55,6 +57,7 @@ export function Marcaveis<T extends string>({ rotulo, opcoes, valor, onChange, e
             control={
               <Checkbox
                 checked={valor.includes(o.valor)}
+                disabled={travadas?.includes(o.valor) && valor.includes(o.valor)}
                 onChange={(e) =>
                   onChange(opcoes.map((x) => x.valor).filter((v) => (v === o.valor ? e.target.checked : valor.includes(v))))}
               />

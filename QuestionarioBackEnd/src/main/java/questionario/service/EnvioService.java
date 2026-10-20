@@ -34,6 +34,7 @@ public class EnvioService {
     private final Bloco1Service bloco1;
     private final Bloco2Service bloco2;
     private final BlocosJsonService blocos;
+    private final AnexoService anexos;
 
     @Transactional(readOnly = true)
     public RespostasResponse respostas(String publicId) {
@@ -45,7 +46,8 @@ public class EnvioService {
                 blocos.lerDoQuestionario(q, 5, Bloco5Dados.class, Bloco5Dados::vazio),
                 blocos.lerDoQuestionario(q, 6, Bloco6Dados.class, Bloco6Dados::vazio),
                 blocos.lerDoQuestionario(q, 7, Bloco7Dados.class, Bloco7Dados::vazio),
-                blocos.lerDoQuestionario(q, 8, Bloco8Dados.class, Bloco8Dados::vazio));
+                blocos.lerDoQuestionario(q, 8, Bloco8Dados.class, Bloco8Dados::vazio),
+                anexos.listar(q));
     }
 
     /** Tudo que impede o envio, na ordem dos blocos. Lista vazia = pode enviar. */

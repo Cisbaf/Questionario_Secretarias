@@ -34,9 +34,14 @@ public record Bloco8Dados(
         return new Bloco8Dados(observacoes, documentos, assinaturaNome, assinaturaData, declaracao, novaVersao, novoAtualizadoEm);
     }
 
+    /** Mesmo bloco com estes documentos marcados (usado para manter marcado o que já tem arquivo anexado). */
+    public Bloco8Dados comDocumentos(Set<DocumentoAnexavel> novos) {
+        return new Bloco8Dados(observacoes, novos, assinaturaNome, assinaturaData, declaracao, version, atualizadoEm);
+    }
+
     @Override
     public Bloco8Dados normalizado() {
-        return new Bloco8Dados(Normaliza.txt(observacoes), Normaliza.conjunto(documentos), Normaliza.txt(assinaturaNome),
+        return new Bloco8Dados(Normaliza.txt(observacoes), Normaliza.conjunto(documentos == null ? null : documentos.stream().filter(d -> d != null && d.doItem82()).collect(java.util.stream.Collectors.toSet())), Normaliza.txt(assinaturaNome),
                 assinaturaData, Boolean.TRUE.equals(declaracao), version, atualizadoEm);
     }
 

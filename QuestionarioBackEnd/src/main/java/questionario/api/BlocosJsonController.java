@@ -14,6 +14,7 @@ import questionario.api.dto.bloco.Bloco5Dados;
 import questionario.api.dto.bloco.Bloco6Dados;
 import questionario.api.dto.bloco.Bloco7Dados;
 import questionario.api.dto.bloco.Bloco8Dados;
+import questionario.service.AnexoService;
 import questionario.service.BlocosJsonService;
 
 /** Blocos 3 a 8. Público: quem tem o link (publicId) lê e grava. O corpo do PUT é o bloco inteiro mais a {@code version}. */
@@ -23,6 +24,7 @@ import questionario.service.BlocosJsonService;
 public class BlocosJsonController {
 
     private final BlocosJsonService service;
+    private final AnexoService anexos;
 
     @GetMapping("/3")
     public Bloco3Dados ler3(@PathVariable String publicId) {
@@ -81,6 +83,10 @@ public class BlocosJsonController {
 
     @PutMapping("/8")
     public Bloco8Dados salvar8(@PathVariable String publicId, @Valid @RequestBody Bloco8Dados corpo) {
-        return service.salvar(publicId, 8, Bloco8Dados.class, corpo);
+        // Documento que já tem arquivo anexado continua marcado, mesmo que o cliente tenha mandado desmarcado.
+        java.util.Set<questionario.domain.enums.DocumentoAnexavel> marcados = new java.util.LinkedHashSet<>(
+                corpo.documentos() == null ? java.util.Set.of() : corpo.documentos());
+        marcados.addAll(anexos.documentosComAnexo(publicId));
+        return service.salvar(publicId, 8, Bloco8Dados.class, corpo.comDocumentos(marcados));
     }
 }

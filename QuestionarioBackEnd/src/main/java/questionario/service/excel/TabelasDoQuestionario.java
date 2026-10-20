@@ -39,23 +39,30 @@ final class TabelasDoQuestionario {
 
     static List<Tabela> de(RespostasResponse r) {
         List<Tabela> t = new ArrayList<>();
-        bloco1(t, r.bloco1());
+        bloco1(t, r.bloco1(), r.anexos());
         bloco2(t, r.bloco2());
         bloco3(t, r.bloco3());
         bloco4(t, r.bloco4());
         bloco5(t, r.bloco5());
         bloco6(t, r.bloco6());
         bloco7(t, r.bloco7());
-        bloco8(t, r.bloco8());
+        bloco8(t, r.bloco8(), r.anexos());
         return t;
     }
 
     // ---------- Bloco 1 e 2 ----------
 
-    private static void bloco1(List<Tabela> t, Bloco1Response b) {
+    private static void bloco1(List<Tabela> t, Bloco1Response b, List<questionario.api.dto.AnexoResponse> anexos) {
         t.add(Tabela.nova("1 Identificação", "Município", "Secretário(a) Municipal de Saúde", "Responsável pelo preenchimento",
                 "Cargo / setor", "E-mail", "Telefone / WhatsApp", "Data do preenchimento")
                 .linha(b.municipio(), b.secretario(), b.responsavel(), b.cargoSetor(), b.email(), b.telefone(), b.dataPreenchimento()));
+        Tabela planilha = Tabela.nova("1 Planilha de coleta", "Arquivo enviado", "Tamanho (KB)", "Enviada em");
+        for (var x : nz(anexos)) {
+            if (x.documento() == questionario.domain.enums.DocumentoAnexavel.PLANILHA_COLETA) {
+                planilha.linha(x.nome(), (int) Math.max(1, Math.round(x.tamanho() / 1024.0)), Formato.dataHora(x.criadoEm()));
+            }
+        }
+        t.add(planilha);
     }
 
     private static void bloco2(List<Tabela> t, Bloco2Response b) {
@@ -257,11 +264,17 @@ final class TabelasDoQuestionario {
 
     // ---------- Bloco 8 ----------
 
-    private static void bloco8(List<Tabela> t, Bloco8Dados b) {
+    private static void bloco8(List<Tabela> t, Bloco8Dados b, List<questionario.api.dto.AnexoResponse> anexos) {
         String documentos = ordenados(b.documentos()).stream().map(Rotulos::de).collect(Collectors.joining("; "));
         t.add(Tabela.nova("8 Observações finais", "Algo que a equipe precisa saber (8.1)", "Documentos que podem ser anexados (8.2)",
                 "Assinatura (secretário(a))", "Data da assinatura", "Declaração de veracidade")
                 .linha(b.observacoes(), documentos, b.assinaturaNome(), b.assinaturaData(), Boolean.TRUE.equals(b.declaracao()) ? "Sim" : "Não"));
+        Tabela a = Tabela.nova("8.2 Arquivos anexados", "Documento", "Arquivo", "Tamanho (KB)", "Enviado em");
+        for (var x : nz(anexos)) {
+            if (!x.documento().doItem82()) continue;
+            a.linha(Rotulos.de(x.documento()), x.nome(), (int) Math.max(1, Math.round(x.tamanho() / 1024.0)), Formato.dataHora(x.criadoEm()));
+        }
+        t.add(a);
     }
 
     // ---------- utilidades ----------

@@ -73,6 +73,20 @@ public class ApiExceptionHandler {
                 null, ConflictException.VERSAO_DESATUALIZADA));
     }
 
+    /** Arquivo maior que o limite do servidor (spring.servlet.multipart): o limite certo de 10 MB é conferido no serviço. */
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    ResponseEntity<ApiErrorResponse> uploadTooBig() {
+        return ResponseEntity.status(413)
+                .body(new ApiErrorResponse("Dados inválidos", Map.of("arquivo", "O arquivo passa de 10 MB.")));
+    }
+
+    @ExceptionHandler({org.springframework.web.multipart.support.MissingServletRequestPartException.class,
+            org.springframework.web.multipart.MultipartException.class})
+    ResponseEntity<ApiErrorResponse> badUpload() {
+        return ResponseEntity.badRequest()
+                .body(new ApiErrorResponse("Dados inválidos", Map.of("arquivo", "Escolha um arquivo para enviar.")));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     ResponseEntity<ApiErrorResponse> badRequest(IllegalArgumentException exception) {
         return response(HttpStatus.BAD_REQUEST, exception.getMessage());

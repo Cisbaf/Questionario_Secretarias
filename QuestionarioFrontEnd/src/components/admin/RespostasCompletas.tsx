@@ -6,6 +6,7 @@ import {
   NECESSIDADES_PACIENTE, ORIGENS_DADO, RESOLVE_SOZINHO, SIM_NAO_EM_PARTE, SIM_NAO_PARCIAL, SISTEMAS_REGULACAO,
   SITUACOES_CLINICAS, TEMAS_URGENCIA, TIPOS_FILA, TIPOS_LEITO, TIPOS_LEITO_PRIVADO, TIPOS_UNIDADE_URGENCIA, rotuloDe,
 } from "@/lib/rotulos";
+import { tamanhoLegivel, urlDoAnexo } from "@/lib/anexos";
 import type { Respostas } from "@/types";
 import {
   Box, Chip, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography,
@@ -90,6 +91,12 @@ export default function RespostasCompletas({ r }: { r: Respostas }) {
           <Campo rotulo="Telefone / WhatsApp">{b1.telefone}</Campo>
           <Campo rotulo="Data do preenchimento">{formatarData(b1.dataPreenchimento)}</Campo>
         </Box>
+        <Campo rotulo="Planilha de coleta preenchida">
+          {(() => {
+            const pl = (r.anexos ?? []).find((a) => a.documento === "PLANILHA_COLETA");
+            return pl ? <><a href={urlDoAnexo(r.publicId, pl.id)} download data-testid="planilha-coleta-link">{pl.nome}</a> ({tamanhoLegivel(pl.tamanho)})</> : null;
+          })()}
+        </Campo>
       </Bloco>
 
       <Bloco numero={2} titulo="Prioridades de atenção à saúde">
@@ -221,6 +228,18 @@ export default function RespostasCompletas({ r }: { r: Respostas }) {
         <Campo rotulo="Resposta">{b8.observacoes}</Campo>
         <Sub>8.2 Documentos que podem ser anexados</Sub>
         <Campo rotulo="Marcados">{(b8.documentos ?? []).length === 0 ? null : juntar((b8.documentos ?? []).map((d) => rotuloDe(DOCUMENTOS_ANEXAVEIS, d)))}</Campo>
+        <Campo rotulo="Arquivos anexados">
+          {(r.anexos ?? []).filter((a) => a.documento !== "PLANILHA_COLETA").length === 0 ? null : (
+            <Box component="ul" sx={{ m: 0, pl: 2.5 }} data-testid="anexos-lista">
+              {(r.anexos ?? []).filter((a) => a.documento !== "PLANILHA_COLETA").map((a) => (
+                <li key={a.id}>
+                  <a href={urlDoAnexo(r.publicId, a.id)} download>{a.nome}</a>
+                  {" "}({tamanhoLegivel(a.tamanho)}) — {rotuloDe(DOCUMENTOS_ANEXAVEIS, a.documento)}
+                </li>
+              ))}
+            </Box>
+          )}
+        </Campo>
         <Sub>Assinatura</Sub>
         <Campo rotulo="Secretário(a) Municipal de Saúde">{b8.assinaturaNome}</Campo>
         <Campo rotulo="Data">{formatarData(b8.assinaturaData)}</Campo>

@@ -1,5 +1,6 @@
 "use client";
 
+import PlanilhaColeta from "@/components/blocos/PlanilhaColeta";
 import BlocoLayout from "@/components/BlocoLayout";
 import { useQuestionario } from "@/components/QuestionarioContext";
 import { useBlocoQuestionario } from "@/hooks/useBlocoQuestionario";
@@ -83,7 +84,8 @@ export const paraServidorBloco1 = (v: Bloco1Valores, version: number | null) => 
 });
 
 export default function Bloco1Form() {
-  const { uuid, recarregarQuestionario } = useQuestionario();
+  const { uuid, questionario, recarregarQuestionario } = useQuestionario();
+  const enviado = questionario?.status === "ENVIADO";
   const motor = useBlocoQuestionario<Bloco1Valores, Bloco1Servidor>({
     uuid,
     numero: 1,
@@ -156,6 +158,7 @@ export default function Bloco1Form() {
           helperText={errosCampos.dataPreenchimento}
         />
       </Box>
+      <PlanilhaColeta uuid={uuid} enviado={enviado} />
     </BlocoLayout>
   );
 }

@@ -150,6 +150,9 @@ export type Bloco8Servidor = RespostaDoBloco & {
   declaracao: boolean;
 };
 
+/** Arquivo anexado ao item 8.2 (GET /anexos). */
+export type Anexo = { id: number; documento: DocumentoAnexavel | "PLANILHA_COLETA"; nome: string; tamanho: number; criadoEm: string };
+
 /** Algo que impede o envio (GET /pendencias). {@code campo} é o caminho do campo dentro do bloco. */
 export type Pendencia = { bloco: number; campo: string; mensagem: string; tipo: "OBRIGATORIO" | "COERENCIA" };
 
@@ -167,4 +170,5 @@ export type Respostas = {
   bloco6: Bloco6Servidor;
   bloco7: Bloco7Servidor;
   bloco8: Bloco8Servidor;
+  anexos: Anexo[];
 };

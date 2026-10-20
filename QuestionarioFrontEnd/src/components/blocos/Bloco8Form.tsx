@@ -8,7 +8,11 @@ import { DOCUMENTOS_ANEXAVEIS, type DocumentoAnexavel } from "@/lib/rotulos";
 import { erroDeData } from "@/lib/datas";
 import { textoOuNulo } from "@/lib/numeros";
 import type { Bloco8Servidor } from "@/types";
+import AnexosDocumento from "@/components/blocos/AnexosDocumento";
+import { listarAnexos, FORMATOS_TEXTO, MAX_ARQUIVOS_POR_DOCUMENTO, MAX_MB } from "@/lib/anexos";
+import type { Anexo } from "@/types";
 import { Checkbox, FormControlLabel, FormHelperText, Typography } from "@mui/material";
+import { useEffect, useState } from "react";
 
 export type Bloco8Valores = {
   observacoes: string;
@@ -48,13 +52,25 @@ export function validarBloco8(v: Bloco8Valores): Record<string, string> {
 }
 
 export default function Bloco8Form() {
-  const { uuid, recarregarQuestionario } = useQuestionario();
+  const { uuid, questionario, recarregarQuestionario } = useQuestionario();
+  const enviado = questionario?.status === "ENVIADO";
+  const [anexos, setAnexos] = useState<Anexo[]>([]);
+  const [erroAnexos, setErroAnexos] = useState(false);
+  useEffect(() => {
+    let ativo = true;
+    listarAnexos(uuid).then((l) => { if (ativo) setAnexos(l); }).catch(() => { if (ativo) setErroAnexos(true); });
+    return () => { ativo = false; };
+  }, [uuid]);
   const motor = useBlocoQuestionario<Bloco8Valores, Bloco8Servidor>({
     uuid, numero: 8, deServidor: deServidorBloco8, paraServidor: paraServidorBloco8, validar: validarBloco8,
     aoSalvar: () => void recarregarQuestionario(),
   });
   const { valores: v, alterar, errosCampos: e } = motor;
   const set = (parte: Partial<Bloco8Valores>) => alterar((a) => ({ ...a, ...parte }));
+  // Documento com arquivo anexado conta como marcado mesmo que o bloco ainda não tenha sido salvo com essa marcação
+  // (o servidor também mantém essa marcação ao salvar).
+  const comArquivo = [...new Set(anexos.map((a) => a.documento))].filter((d): d is DocumentoAnexavel => d !== "PLANILHA_COLETA");
+  const marcados = v ? DOCUMENTOS_ANEXAVEIS.map((d) => d.valor).filter((x) => v.documentos.includes(x) || comArquivo.includes(x)) : [];
 
   return (
     <BlocoLayout numero={8} motor={motor}>
@@ -66,9 +82,14 @@ export default function Bloco8Form() {
           </Secao>
 
           <Secao id="b8-docs" titulo="8.2 Documentos que podem ser anexados"
-            ajuda="Só marque o que o município pode mandar à parte; o envio de arquivos não é feito neste site.">
-            <Marcaveis rotulo="Documentos" opcoes={DOCUMENTOS_ANEXAVEIS} valor={v.documentos}
+            ajuda={`Marque os documentos que o município pode enviar e anexe os arquivos logo abaixo de cada um (até ${MAX_ARQUIVOS_POR_DOCUMENTO} arquivos por documento, ${MAX_MB} MB cada: ${FORMATOS_TEXTO}). Quem já tem arquivo anexado fica marcado até o arquivo ser removido.`}>
+            <Marcaveis rotulo="Documentos" opcoes={DOCUMENTOS_ANEXAVEIS} valor={marcados}
+              travadas={comArquivo}
               onChange={(d) => set({ documentos: d })} erro={e.documentos} />
+            {erroAnexos && <FormHelperText error>Não foi possível carregar os arquivos já anexados. Recarregue a página.</FormHelperText>}
+            {DOCUMENTOS_ANEXAVEIS.filter((d) => marcados.includes(d.valor)).map((d) => (
+              <AnexosDocumento key={d.valor} uuid={uuid} documento={d.valor} anexos={anexos} enviado={enviado} aoMudar={setAnexos} />
+            ))}
           </Secao>
 
           <Secao id="b8-assinatura" titulo="Assinatura do(a) Secretário(a) Municipal de Saúde">
