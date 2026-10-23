@@ -1,15 +1,16 @@
 "use client";
 
 import { useAdmin } from "@/components/admin/AdminContext";
-import { ApiError, downloadFile, getJson } from "@/lib/api";
+import { ApiError, deleteJson, downloadFile, getJson } from "@/lib/api";
 import { mensagemDeErro } from "@/lib/erros";
 import { formatarDataHora } from "@/lib/formatters";
 import type { AdminResumo, FiltroStatus } from "@/types/admin";
+import DeleteIcon from "@mui/icons-material/Delete";
 import DownloadIcon from "@mui/icons-material/Download";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import {
-  Alert, Box, Button, Chip, CircularProgress, Menu, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead,
+  Alert, Box, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Menu, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, ToggleButton, ToggleButtonGroup, Tooltip, Typography,
 } from "@mui/material";
 import Link from "next/link";
@@ -35,6 +36,8 @@ export default function AdminPage() {
   const [lista, setLista] = useState<AdminResumo[] | null>(null);
   const [erro, setErro] = useState("");
   const [baixando, setBaixando] = useState("");
+  const [excluindo, setExcluindo] = useState<AdminResumo | null>(null);
+  const [apagando, setApagando] = useState(false);
   const [menuConsolidado, setMenuConsolidado] = useState<HTMLElement | null>(null);
 
   const tratar = useCallback((e: unknown) => {
@@ -62,6 +65,22 @@ export default function AdminPage() {
       tratar(e);
     } finally {
       setBaixando("");
+    }
+  }
+
+  async function confirmarExclusao() {
+    if (!excluindo) return;
+    setApagando(true);
+    setErro("");
+    try {
+      await deleteJson(`/admin/questionarios/${excluindo.publicId}`);
+      setExcluindo(null);
+      await carregar();
+    } catch (e) {
+      setExcluindo(null);
+      tratar(e);
+    } finally {
+      setApagando(false);
     }
   }
 
@@ -164,6 +183,10 @@ export default function AdminPage() {
                         onClick={() => void baixar(`${q.publicId}-p`, `/admin/questionarios/${q.publicId}/pdf`, "questionario.pdf")}>
                         {baixando === `${q.publicId}-p` ? "Gerando…" : "PDF"}
                       </Button>
+                      <Button size="small" color="error" startIcon={<DeleteIcon />} disabled={baixando !== ""}
+                        data-testid={`excluir-${q.publicId}`} onClick={() => setExcluindo(q)}>
+                        Apagar
+                      </Button>
                     </Stack>
                   </TableCell>
                 </TableRow>
@@ -172,6 +195,22 @@ export default function AdminPage() {
           </Table>
         </TableContainer>
       )}
+
+      <Dialog open={excluindo !== null} onClose={() => !apagando && setExcluindo(null)}>
+        <DialogTitle>Apagar questionário?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            O questionário de {excluindo?.municipio ?? "(sem município)"} e todos os seus anexos serão apagados de forma definitiva.
+            Esta ação não pode ser desfeita.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setExcluindo(null)} disabled={apagando}>Cancelar</Button>
+          <Button color="error" variant="contained" onClick={() => void confirmarExclusao()} disabled={apagando} data-testid="confirmar-exclusao">
+            {apagando ? "Apagando…" : "Apagar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

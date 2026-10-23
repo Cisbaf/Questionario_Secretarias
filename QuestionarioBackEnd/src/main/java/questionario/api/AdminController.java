@@ -5,7 +5,10 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -20,7 +23,6 @@ import questionario.service.excel.PdfService;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-/** Area do admin (equipe CISBAF): so leitura. Toda a rota {@code /api/admin/**} exige o login (SecurityConfig). */
 @RestController
 @RequestMapping("/api/admin/questionarios")
 @RequiredArgsConstructor
@@ -30,19 +32,16 @@ public class AdminController {
     private final ExcelService excel;
     private final PdfService pdf;
 
-    /** Lista com situacao e avisos. {@code status}: TODOS (padrao), ENVIADO ou RASCUNHO. */
     @GetMapping
     public List<AdminResumo> listar(@RequestParam(required = false) String status) {
         return service.listar(FiltroStatus.de(status, FiltroStatus.TODOS));
     }
 
-    /** Excel consolidado. {@code status}: ENVIADO (padrao), TODOS ou RASCUNHO. */
     @GetMapping("/excel")
     public ResponseEntity<byte[]> consolidado(@RequestParam(required = false) String status) {
         return arquivo(excel.consolidado(FiltroStatus.de(status, FiltroStatus.ENVIADO)));
     }
 
-    /** PDF consolidado (mesmas tabelas do Excel). {@code status}: ENVIADO (padrao), TODOS ou RASCUNHO. */
     @GetMapping("/pdf")
     public ResponseEntity<byte[]> consolidadoPdf(@RequestParam(required = false) String status) {
         return arquivo(pdf.consolidado(FiltroStatus.de(status, FiltroStatus.ENVIADO)), PdfService.TIPO);
@@ -51,6 +50,12 @@ public class AdminController {
     @GetMapping("/{publicId}")
     public AdminDetalhe detalhe(@PathVariable String publicId) {
         return service.detalhe(publicId);
+    }
+
+    @DeleteMapping("/{publicId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void excluir(@PathVariable String publicId) {
+        service.excluir(publicId);
     }
 
     @GetMapping("/{publicId}/excel")

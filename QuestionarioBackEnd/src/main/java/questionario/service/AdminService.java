@@ -3,26 +3,15 @@ package questionario.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import questionario.api.dto.AdminDetalhe;
-import questionario.api.dto.AdminResumo;
-import questionario.api.dto.BlocoSituacaoResponse;
-import questionario.api.dto.Pendencia;
-import questionario.api.dto.RespostasResponse;
+import questionario.api.dto.*;
 import questionario.domain.Questionario;
-import questionario.repository.QuestionarioRepository;
+import questionario.repository.*;
 
 import java.text.Normalizer;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
-/** Leitura da equipe (admin): lista, visao completa e o material do Excel. Nada aqui grava. */
 @Service
 @RequiredArgsConstructor
 public class AdminService {
@@ -32,8 +21,12 @@ public class AdminService {
     private final QuestionarioRepository repository;
     private final QuestionarioService questionarios;
     private final EnvioService envio;
+    private final AnexoRepository anexos;
+    private final AnexoConteudoRepository conteudos;
+    private final Bloco1IdentificacaoRepository bloco1;
+    private final Bloco2PrioridadesRepository bloco2;
+    private final BlocoConteudoRepository blocos;
 
-    /** Um questionario ja lido por inteiro, com o que o Excel e a lista precisam. */
     public record Lido(Questionario questionario, RespostasResponse respostas, List<Pendencia> pendencias,
                        List<BlocoSituacaoResponse> situacao) {
     }
@@ -51,13 +44,23 @@ public class AdminService {
                 .toList();
     }
 
+    @Transactional
+    public void excluir(String publicId) {
+        Questionario q = questionarios.buscar(publicId);
+        anexos.findByQuestionarioOrderByIdAsc(q).forEach(a -> conteudos.deleteById(a.getId()));
+        anexos.deleteAll(anexos.findByQuestionarioOrderByIdAsc(q));
+        blocos.deleteAll(blocos.findByQuestionario(q));
+        bloco1.findByQuestionario(q).ifPresent(bloco1::delete);
+        bloco2.findByQuestionario(q).ifPresent(bloco2::delete);
+        repository.delete(q);
+    }
+
     @Transactional(readOnly = true)
     public AdminDetalhe detalhe(String publicId) {
         RespostasResponse respostas = envio.respostas(publicId);
         return new AdminDetalhe(respostas, EnvioService.pendencias(respostas));
     }
 
-    /** Os questionarios do filtro, ordenados por municipio (sem municipio no fim), ja lidos por inteiro. */
     @Transactional(readOnly = true)
     public List<Lido> lerPara(FiltroStatus filtro) {
         return lerTodos().stream().filter(l -> filtro.aceita(l.questionario())).toList();
@@ -69,7 +72,6 @@ public class AdminService {
         return lerUm(q);
     }
 
-    /** Quais municipios aparecem em mais de um questionario (pela chave sem acento/caixa). */
     @Transactional(readOnly = true)
     public Set<String> municipiosRepetidos() {
         return lerTodos().stream()
